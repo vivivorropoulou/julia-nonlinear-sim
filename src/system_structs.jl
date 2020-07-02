@@ -40,6 +40,8 @@ module system_structs
 	Define a parameter struct.
 	"""
 	@with_kw mutable struct LeakyIntegratorPars
+		L_inv
+		C_inv
 	    M_inv
 	    kP
 	    T_inv
@@ -109,7 +111,7 @@ module system_structs
 	Setup the system with default parameters.
 	"""
 	function default_pars(N)
-		low_layer_control = LeakyIntegratorPars(M_inv=60.,kP=1.3,T_inv=1.,kI=0.9)
+		low_layer_control = LeakyIntegratorPars(M_inv=60.,kP=1.3,T_inv=1.,kI=0.9) # L_inv und C_inv
 		#g = SimpleGraph(1)
 		g = random_regular_graph(iseven(3N) ? N : (N-1), 3)
 		#incidence = incidence_matrix(g, oriented=true)

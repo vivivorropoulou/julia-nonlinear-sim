@@ -18,6 +18,51 @@ begin
 	using ToeplitzMatrices
 end
 
+function DCtoymodel!(du, u, p, t)
+	#VARIABLEN
+	K = 1
+	R = 0.0532
+	v_ref = 48 .*ones(p.N)
+
+	i_L = view(u, 1:Int(1.5*p.N))
+	v = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
+
+	di_L = view(du, 1:Int(1.5*p.N))
+	dv = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
+
+	control_power_integrator = view(du,Int(2.5*p.N+1):Int(3.5*p.N))
+	control_power_integrator_abs = view(du,Int(3.5*p.N+1):Int(4.5*p.N))
+
+	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
+	power_ILC = p.hl.current_background_power #(t)
+	power_LI =  K .* (v_ref - v) #K = droop coefficient #low-layer controller
+	#Pd = periodic power + fluctuating_power uncontrolled net power demand at node p
+	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t)  #determine the update cycle of the hlc
+	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
+	sum_power = power_ILC .+ power_LI .+ periodic_power .+ fluctuating_power .- (v .* (p.incidence * i_L))
+
+	di_L = p.ll.L_inv .* (-R .* i_L .+ p.incidence' * v) # size = 6
+	dv =  p.ll.C_inv .* sum_power ./ v # p.ll.C_inv
+	control_power_integrator = power_LI
+	control_power_integrator_abs = abs.(power_LI)
+	sum_power = v .* (-p.incidence * i_L)
+
+	#println(size(p.incidence'))
+	#println(size(v))
+	#println(size(v))
+	# println(size(control_power_integrator))
+	#
+	#println(size(sum_power))
+	# println(size(control_power_integrator_abs))
+
+	#sum_power = v .* (- p.incidence * i_L)
+	#diag(1/v...)
+	return nothing
+end
+
+
+
+
 @doc """
     ACtoymodel!(du, u, p, t)
 Lower-layer dynamics with controller from [Dörfler et al. 2017] eqns. 15a,b,c.
@@ -29,7 +74,7 @@ with kp = D, kI = K and chi = -p
 function ACtoymodel!(du, u, p, t)
 	theta = view(u, 1:p.N)
 	omega = view(u, (p.N+1):(2*p.N))
-	chi = view(u, (2*p.N+1):(3*p.N))
+	chi = view(u, (2*p.N+1):(3*p.N)) # controller state variable
 
 	dtheta = view(du, 1:p.N)
 	domega = view(du, (p.N+1):(2*p.N))
@@ -40,9 +85,10 @@ function ACtoymodel!(du, u, p, t)
 
 	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
 	power_ILC = p.hl.current_background_power #(t)
-	power_LI =  chi .- p.ll.kP .* omega
-	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t)
-	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
+	power_LI =  chi .- p.ll.kP .* omega  #low-layer controller
+	#Pd = periodic power + fluctuating_power uncontrolled net power demand at node p
+	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t) #determine the update cycle of the hlc
+	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here wecan add fluctuating infeed as well
 	# avoid *, use mul! instead with pre-allocated cache http://docs.juliadiffeq.org/latest/basics/faq.html
 	#cache1 = zeros(size(p.coupling)[1])
 	#cache2 = similar(cache1)
@@ -57,7 +103,7 @@ function ACtoymodel!(du, u, p, t)
 	@. domega = p.ll.M_inv .* (power_ILC .+ power_LI
 						.+ periodic_power .+ fluctuating_power .+ flows)
 						# signs checked (Ruth)
-    @. dchi = p.ll.T_inv .* (- omega .- p.ll.kI .* chi) # Integrate the control power used.
+    @. dchi = p.ll.T_inv .* (- omega .- p.ll.kI .* chi) # Integrate the control power used. # model of the llc
 	@. control_power_integrator = power_LI
 	@. control_power_integrator_abs = abs.(power_LI)
 	return nothing

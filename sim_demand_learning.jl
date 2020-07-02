@@ -39,10 +39,11 @@ begin
 	l_day = 3600*24 # DemCurve.l_day
 	l_hour = 3600 # DemCurve.l_hour
 	l_minute = 60 # DemCurve.l_minute
-	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=52,T_inv=1/0.05,kI=10)
+	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=52,T_inv=1/0.05,kI=10)S
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=525,T_inv=1/0.05,kI=0.005)
 	# low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
-	low_layer_control = system_structs.LeakyIntegratorPars(M_inv=[1/5.; 1/4.8; 1/4.1; 1/4.8],kP= [400.; 110.; 100.; 200.],T_inv=[1/0.04; 1/0.045; 1/0.047; 1/0.043],kI=[0.05; 0.004; 0.05; 0.001]) # different for each node, change array
+	low_layer_control = system_structs.LeakyIntegratorPars(M_inv=[1/5.; 1/4.8; 1/4.1; 1/4.8],kP= [400.; 110.; 100.; 200.],T_inv=[1/0.04; 1/0.045; 1/0.047; 1/0.043],kI=[0.05; 0.004; 0.05; 0.001], L_inv= 1/0.237e-4.*diagm(0=>ones(ne(graph))) , C_inv = 1/0.01*diagm(0=>ones(nv(graph))))
+	# add L_inv = and C_inv = in brackets
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=[0.1; 10; 100; 1000],T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=[1/0.05; 1/0.5; 1/5; 1/50],kI=repeat([0.005], inner=N)) # different for each node, change array
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=repeat([1/0.05], inner = N),kI=[0.005; 0.5; 5; 500]) # different for each node, change array
@@ -159,12 +160,12 @@ compound_pars.coupling = coupfact .* diagm(0=>ones(ne(graph)))
 
 
 begin
-	factor = 0#0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
+	factor = 0.0 # 0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
-	ode_tl1 = ODEProblem(network_dynamics.ACtoymodel!, ic, tspan, compound_pars,
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars,
 	callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
-						 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
+	PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
 
 sol1 = solve(ode_tl1, Rodas4())
@@ -210,6 +211,7 @@ ILC_power_hourly = [norm(reshape(ILC_power,(num_days+2)*24,N)[h,:]) for h in 1:2
 ILC_power_hourly_node1 = [norm(reshape(ILC_power,(num_days+2)*24,N)[h,1]) for h in 1:24*(num_days+2)]
 dd = t->((periodic_demand(t) .+ residual_demand(t))./100)
 load_amp = [first(maximum(dd(t))) for t in 1:3600*24:3600*24*num_days]
+
 
 norm_hourly_energy = [norm(hourly_energy[h,:]) for h in 1:24*num_days]
 
