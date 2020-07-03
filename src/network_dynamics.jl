@@ -20,7 +20,7 @@ end
 
 function DCtoymodel!(du, u, p, t)
 	#VARIABLEN
-	K = 1
+	K = [1 1 1 1;1 1 1 1;1 1 1 1;1 1 1 1;1 1 1 1;1 1 1 1]
 	R = 0.0532
 	v_ref = 48 .*ones(p.N)
 
@@ -33,9 +33,10 @@ function DCtoymodel!(du, u, p, t)
 	control_power_integrator = view(du,Int(2.5*p.N+1):Int(3.5*p.N))
 	control_power_integrator_abs = view(du,Int(3.5*p.N+1):Int(4.5*p.N))
 
+	i_gen = K * (v_ref - v)
 	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
 	power_ILC = p.hl.current_background_power #(t)
-	power_LI =  K .* (v_ref - v) #K = droop coefficient #low-layer controller
+	power_LI = v .* (p.incidence * i_gen)#K .* (v_ref - v) #K = droop coefficient #low-layer controller
 	#Pd = periodic power + fluctuating_power uncontrolled net power demand at node p
 	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t)  #determine the update cycle of the hlc
 	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
@@ -50,8 +51,8 @@ function DCtoymodel!(du, u, p, t)
 	#println(size(p.incidence'))
 	#println(size(v))
 	#println(size(v))
-	# println(size(control_power_integrator))
-	#
+	#println(size(control_power_integrator))
+	#println(size(v_ref))
 	#println(size(sum_power))
 	# println(size(control_power_integrator_abs))
 
