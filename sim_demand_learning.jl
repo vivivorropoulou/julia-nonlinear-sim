@@ -2,6 +2,7 @@ begin
 	dir = @__DIR__
 	include("$dir/src/system_structs.jl")
 	include("$dir/src/network_dynamics.jl")
+
 end
 
 begin
@@ -34,6 +35,9 @@ end
 
 
 ############################################
+begin
+	graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
+end
 
 begin
 	l_day = 3600*24 # DemCurve.l_day
@@ -42,7 +46,7 @@ begin
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=52,T_inv=1/0.05,kI=10)S
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=525,T_inv=1/0.05,kI=0.005)
 	# low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
-	low_layer_control = system_structs.LeakyIntegratorPars(M_inv=[1/5.; 1/4.8; 1/4.1; 1/4.8],kP= [400.; 110.; 100.; 200.],T_inv=[1/0.04; 1/0.045; 1/0.047; 1/0.043],kI=[0.05; 0.004; 0.05; 0.001], L_inv= 1/0.237e-4.*diagm(0=>ones(ne(graph))) , C_inv = 1/0.01*diagm(0=>ones(nv(graph))))
+	low_layer_control = system_structs.LeakyIntegratorPars(M_inv=[1/5.; 1/4.8; 1/4.1; 1/4.8],kP= [400.; 110.; 100.; 200.],T_inv=[1/0.04; 1/0.045; 1/0.047; 1/0.043],kI=[0.05; 0.004; 0.05; 0.001], L_inv= 1/0.237e-4.*ones(ne(graph)) , C_inv = 1/0.01*ones(nv(graph)))
 	# add L_inv = and C_inv = in brackets
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=[0.1; 10; 100; 1000],T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=[1/0.05; 1/0.5; 1/5; 1/50],kI=repeat([0.005], inner=N)) # different for each node, change array
@@ -56,9 +60,7 @@ end
 ############################################
 
 # # Full graph for N=4 and degree 3 graph otherwise, change last 3 to 1 for N=2
-begin
-	graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
-end
+
 
 # change last "3" to 1 for N=2
 
@@ -160,7 +162,7 @@ compound_pars.coupling = coupfact .* diagm(0=>ones(ne(graph)))
 
 
 begin
-	factor = 0.0 # 0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
+	factor = 0.02 # 0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
 	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars,
