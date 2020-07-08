@@ -162,7 +162,7 @@ compound_pars.coupling = coupfact .* diagm(0=>ones(ne(graph)))
 
 
 begin
-	factor = 0.02 # 0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
+	factor = 0.01 # 0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
 	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars,

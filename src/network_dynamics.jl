@@ -54,7 +54,7 @@ function DCtoymodel!(du, u, p, t)
 
 	dv = p.ll.C_inv.* (-1 .*(p.incidence * i_L))
 	dv += p.ll.C_inv.*i_gen
-	dv += p.ll.C_inv.*sum_power./(v.+1)
+	dv += p.ll.C_inv.*sum_power./v
 	#dv *= p.ll.C_inv
 
 
