@@ -26,11 +26,13 @@ begin
 end
 
 begin
-	phase_filter = 1:N
-	freq_filter = N+1:2N
-	control_filter = 2N+1:3N
-	energy_filter = 3N+1:4N
-	energy_abs_filter = 4N+1:5N
+	current_filter = 1:Int(1.5N)
+	voltage_filter = Int(1.5N)+1:Int(2.5N)
+	#phase_filter = Int(2.5N)+1:Int(3.5N)#1:N
+	#freq_filter = Int(3.5N)+1:Int(4.5N) #N+1:2N
+	#control_filter = Int(2.5N)+1:Int(3.5N)#2N+1:3N
+	energy_filter = Int(2.5N)+1:Int(3.5N)#3N+1:4N
+	energy_abs_filter = Int(3.5N)+1:Int(4.5N) #4N+1:5N
 end
 
 
@@ -165,13 +167,17 @@ begin
 	factor = 0.01 # 0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
-	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars,
-	callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
-	PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars)
+	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
+	#PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
 
 sol1 = solve(ode_tl1, Rodas4())
 
+plot(sol1, vars = voltage_filter)
+ylabel!("voltage")
+
+plot(sol1, vars = energy_filter)
 
 #######################################################################
 #                               PLOTTING                             #
