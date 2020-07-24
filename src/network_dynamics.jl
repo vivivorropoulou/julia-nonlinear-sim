@@ -21,9 +21,9 @@ end
 function DCtoymodel!(du, u, p, t)
 	#VARIABLEN
 
-	K = ones(p.N)
+	K = 1
 	R = 0.0532
-	v_ref = 48 .*ones(p.N)
+	v_ref = 48
 
 	i_L = view(u, 1:Int(1.5*p.N))
 	v = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
@@ -47,7 +47,7 @@ function DCtoymodel!(du, u, p, t)
 	 #uncontrolled net power demand at node p
 	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t) #determine the update cycle of the hlc
 
-	println("periodic power: ", periodic_power)
+	#println("periodic power: ", periodic_power)
 
 	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
 	Pd = periodic_power + fluctuating_power
@@ -57,7 +57,7 @@ function DCtoymodel!(du, u, p, t)
 	#sum_power = v .* (-p.incidence * i_L)
 	#sum_power = power_ILC .+ power_LI .+ periodic_power .+fluctuating_power
 	di_L = p.ll.L_inv .*(-R.*i_L .+(p.incidence' * v))
-	dv = p.ll.C_inv.* (-1 .*(p.incidence * i_L) .+  K .* (v_ref - v) .+ Pd./v )
+	dv = p.ll.C_inv.* (-1 .*(p.incidence * i_L) .+  K .* (v_ref .- v) .+ Pd./v )
 	############################################################################
 	#sum_power = power_ILC .+ power_LI .+ periodic_power .+fluctuating_power
 	#di_L = p.ll.L_inv .*(-R.*i_L .+(p.incidence' * v))
@@ -67,8 +67,8 @@ function DCtoymodel!(du, u, p, t)
 
 
 	#dv =  p.ll.C_inv .* sum_power ./ v  .- (p.incidence * i_L)
-	 control_power_integrator =  v.* K .* (v_ref - v)
-	 control_power_integrator_abs = abs.(v.* K .* (v_ref - v))
+	 control_power_integrator =  v.* K .* (v_ref .- v)
+	 control_power_integrator_abs = abs.(v.* K .* (v_ref .- v))
 
 	#println(size(p.incidence'))
 	#println(size(v))
@@ -120,7 +120,7 @@ function ACtoymodel!(du, u, p, t)
 	#mul!(cache2, p.coupling, sin.(cache1))
 	#mul!(flows, - p.incidence, cache2 )
 	flows = - (p.incidence * p.coupling * sin.(p.incidence' * theta))
-	println("periodic power: ", periodic_power)	
+	println("periodic power: ", periodic_power)
 end
 
 @doc """
