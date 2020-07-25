@@ -2,7 +2,6 @@ begin
 	dir = @__DIR__
 	include("$dir/src/system_structs.jl")
 	include("$dir/src/network_dynamics.jl")
-
 end
 
 begin
@@ -26,30 +25,31 @@ begin
 end
 
 begin
-	current_filter = 1:Int(1.5N)
-	voltage_filter = Int(1.5N)+1:Int(2.5N)
-	#phase_filter = Int(2.5N)+1:Int(3.5N)#1:N
-	#freq_filter = Int(3.5N)+1:Int(4.5N) #N+1:2N
-	#control_filter = Int(2.5N)+1:Int(3.5N)#2N+1:3N
-	energy_filter = Int(2.5N)+1:Int(3.5N)#3N+1:4N
-	energy_abs_filter = Int(3.5N)+1:Int(4.5N) #4N+1:5N
+######### DC MODEL FILTER ################################
+	#current_filter = 1:Int(1.5N)
+	#voltage_filter = Int(1.5N)+1:Int(2.5N)
+	#energy_filter = Int(2.5N)+1:Int(3.5N)#3N+1:4N
+	#energy_abs_filter = Int(3.5N)+1:Int(4.5N) #4N+1:5N
+##########################################################
+######### AC MODEL FILTER ################################
+	phase_filter = 1:N
+	freq_filter = N+1:2N
+	control_filter = 2N+1:3N
+	energy_filter = 3N+1:4N
+	energy_abs_filter = 4N+1:5N
 end
 
 
 ############################################
-begin
-	graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
-end
 
 begin
 	l_day = 3600*24 # DemCurve.l_day
 	l_hour = 3600 # DemCurve.l_hour
 	l_minute = 60 # DemCurve.l_minute
-	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=52,T_inv=1/0.05,kI=10)S
+	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=52,T_inv=1/0.05,kI=10)
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=525,T_inv=1/0.05,kI=0.005)
 	# low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
 	low_layer_control = system_structs.LeakyIntegratorPars(M_inv=[1/5.; 1/4.8; 1/4.1; 1/4.8],kP= [400.; 110.; 100.; 200.],T_inv=[1/0.04; 1/0.045; 1/0.047; 1/0.043],kI=[0.05; 0.004; 0.05; 0.001], L_inv= 1/0.237e-4.*ones(ne(graph)) , C_inv = 1/0.01*ones(nv(graph)))
-	# add L_inv = and C_inv = in brackets
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=[0.1; 10; 100; 1000],T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=[1/0.05; 1/0.5; 1/5; 1/50],kI=repeat([0.005], inner=N)) # different for each node, change array
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=repeat([1/0.05], inner = N),kI=[0.005; 0.5; 5; 500]) # different for each node, change array
@@ -62,7 +62,9 @@ end
 ############################################
 
 # # Full graph for N=4 and degree 3 graph otherwise, change last 3 to 1 for N=2
-
+begin
+	graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
+end
 
 # change last "3" to 1 for N=2
 
@@ -102,12 +104,12 @@ function (dav::demand_amp_var)(t)
 end
 
 # fixed amp over the days
- #demand_amp = rand(N) .* 250.
+# demand_amp = rand(N) .* 250.
 
 # # slowly increasing amplitude - only working for 10 days now
-demand_ampp = demand_amp_var(repeat([10 20 30 40 50 60 70 80 90 100 110], outer=Int(N/2))') # random positive amp over days by 10%
- demand_ampn = demand_amp_var(repeat([-10 -20 -30 -40 -50 -60 -70 -80 -90 -100 -110], outer=Int(N/2))') # random positive amp over days by 10%
- demand_amp = t->vcat(demand_ampp(t), demand_ampn(t))
+# demand_ampp = demand_amp_var(repeat([10 20 30 40 50 60 70 80 90 100 110], outer=Int(N/2))') # random positive amp over days by 10%
+# demand_ampn = demand_amp_var(repeat([-10 -20 -30 -40 -50 -60 -70 -80 -90 -100 -110], outer=Int(N/2))') # random positive amp over days by 10%
+# demand_amp = t->vcat(demand_ampp(t), demand_ampn(t))
 
 # # slowly decreasing amplitude - only working for 10 days now
 # demand_ampp = demand_amp_var(repeat([110 100 90 80 70 60 50 40 30 20 10], outer=Int(N/2))') # random positive amp over days by 10%
@@ -120,11 +122,11 @@ demand_ampp = demand_amp_var(repeat([10 20 30 40 50 60 70 80 90 100 110], outer=
 # demand_amp = t->vcat(demand_ampp(t), demand_ampn(t))
 
 # slowly increasing and decreasing amplitude - only working for <= 10 days and N = 4 now
-#demand_amp1 = demand_amp_var(repeat([80 80 80 10 10 10 40 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
-#demand_amp2 = demand_amp_var(repeat([10 10 10 80 80 80 40 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
-#demand_amp3 = demand_amp_var(repeat([60 60 60 60 10 10 10 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
-#demand_amp4 = demand_amp_var(repeat([30 30 30 30 10 10 10 80 80 80 80], outer=Int(N/4))') # random positive amp over days by 10%
-#demand_amp = t->vcat(demand_amp1(t), demand_amp2(t), demand_amp3(t), demand_amp4(t))
+demand_amp1 = demand_amp_var(repeat([80 80 80 10 10 10 40 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
+demand_amp2 = demand_amp_var(repeat([10 10 10 80 80 80 40 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
+demand_amp3 = demand_amp_var(repeat([60 60 60 60 10 10 10 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
+demand_amp4 = demand_amp_var(repeat([30 30 30 30 10 10 10 80 80 80 80], outer=Int(N/4))') # random positive amp over days by 10%
+demand_amp = t->vcat(demand_amp1(t), demand_amp2(t), demand_amp3(t), demand_amp4(t))
 
 
 # # random positive amp over days by 30%
@@ -164,20 +166,16 @@ compound_pars.coupling = coupfact .* diagm(0=>ones(ne(graph)))
 
 
 begin
-	factor = 0.01 # 0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
+	factor = 0.01#0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
-	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars)
-	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
-	#PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
+	ode_tl1 = ODEProblem(network_dynamics.ACtoymodel!, ic, tspan, compound_pars,
+	callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
+						 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
 
 sol1 = solve(ode_tl1, Rodas4())
 
-plot(sol1, vars = voltage_filter)
-ylabel!("voltage!")
-
-plot(sol1, vars = energy_filter)
 
 #######################################################################
 #                               PLOTTING                             #
@@ -219,7 +217,6 @@ ILC_power_hourly = [norm(reshape(ILC_power,(num_days+2)*24,N)[h,:]) for h in 1:2
 ILC_power_hourly_node1 = [norm(reshape(ILC_power,(num_days+2)*24,N)[h,1]) for h in 1:24*(num_days+2)]
 dd = t->((periodic_demand(t) .+ residual_demand(t))./100)
 load_amp = [first(maximum(dd(t))) for t in 1:3600*24:3600*24*num_days]
-
 
 norm_hourly_energy = [norm(hourly_energy[h,:]) for h in 1:24*num_days]
 

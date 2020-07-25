@@ -1,6 +1,5 @@
 @doc """
 This is a module that contains the system and control dynamics.
-
 # Examples
 ```julia-repl
 julia> include("src/network_dynamics.jl")
@@ -17,6 +16,13 @@ begin
 	using DSP
 	using ToeplitzMatrices
 end
+
+@doc """
+    ACtoymodel!(du, u, p, t)
+Lower-layer dynamics with controller from [Dörfler et al. 2017] eqns. 15a,b,c.
+with kp = D, kI = K and chi = -p
+[Dörfler et al. 2017]: https://arxiv.org/pdf/1711.07332.pdf
+"""
 
 function DCtoymodel!(du, u, p, t)
 	#VARIABLEN
@@ -83,21 +89,10 @@ function DCtoymodel!(du, u, p, t)
 	return nothing
 end
 
-
-
-
-@doc """
-    ACtoymodel!(du, u, p, t)
-Lower-layer dynamics with controller from [Dörfler et al. 2017] eqns. 15a,b,c.
-with kp = D, kI = K and chi = -p
-[Dörfler et al. 2017]: https://arxiv.org/pdf/1711.07332.pdf
-"""
-
-
 function ACtoymodel!(du, u, p, t)
 	theta = view(u, 1:p.N)
 	omega = view(u, (p.N+1):(2*p.N))
-	chi = view(u, (2*p.N+1):(3*p.N)) # controller state variable
+	chi = view(u, (2*p.N+1):(3*p.N))
 
 	dtheta = view(du, 1:p.N)
 	domega = view(du, (p.N+1):(2*p.N))
@@ -108,10 +103,9 @@ function ACtoymodel!(du, u, p, t)
 
 	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
 	power_ILC = p.hl.current_background_power #(t)
-	power_LI =  chi .- p.ll.kP .* omega  #low-layer controller
-	#Pd = periodic power + fluctuating_power uncontrolled net power demand at node p
-	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t) #determine the update cycle of the hlc
-	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here wecan add fluctuating infeed as well
+	power_LI =  chi .- p.ll.kP .* omega
+	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t)
+	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
 	# avoid *, use mul! instead with pre-allocated cache http://docs.juliadiffeq.org/latest/basics/faq.html
 	#cache1 = zeros(size(p.coupling)[1])
 	#cache2 = similar(cache1)
@@ -120,7 +114,16 @@ function ACtoymodel!(du, u, p, t)
 	#mul!(cache2, p.coupling, sin.(cache1))
 	#mul!(flows, - p.incidence, cache2 )
 	flows = - (p.incidence * p.coupling * sin.(p.incidence' * theta))
-	println("periodic power: ", periodic_power)
+
+
+	@. dtheta = omega
+	@. domega = p.ll.M_inv .* (power_ILC .+ power_LI
+						.+ periodic_power .+ fluctuating_power .+ flows)
+						# signs checked (Ruth)
+    @. dchi = p.ll.T_inv .* (- omega .- p.ll.kI .* chi) # Integrate the control power used.
+	@. control_power_integrator = power_LI
+	@. control_power_integrator_abs = abs.(power_LI)
+	return nothing
 end
 
 @doc """
