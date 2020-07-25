@@ -175,7 +175,7 @@ end
 sol1 = solve(ode_tl1, Rodas4())
 
 plot(sol1, vars = voltage_filter)
-ylabel!("voltage")
+ylabel!("voltage!")
 
 plot(sol1, vars = energy_filter)
 
