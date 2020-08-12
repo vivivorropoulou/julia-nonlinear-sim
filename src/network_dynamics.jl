@@ -26,67 +26,46 @@ with kp = D, kI = K and chi = -p
 
 function DCtoymodel!(du, u, p, t)
 	#VARIABLEN
-
-	K = 1
+ 	K = 1.
 	R = 0.0532
-	v_ref = 48
+	v_ref = 48.
 
-	i_L = view(u, 1:Int(1.5*p.N))
+	i= view(u, 1:Int(1.5*p.N)) # u = n_lines
 	v = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
 
-	di_L = view(du, 1:Int(1.5*p.N))
+	di = view(du, 1:Int(1.5*p.N))
 	dv = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
 
 	control_power_integrator = view(du,Int(2.5*p.N+1):Int(3.5*p.N))
 	control_power_integrator_abs = view(du,Int(3.5*p.N+1):Int(4.5*p.N))
-
-	#i_gen = K .* (v_ref - v)
-
-
+	#i = (K * (v_ref .- v)).*i
 	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
 	power_ILC = p.hl.current_background_power #(t)
-
 	#power_LI = v .* i_gen
-
-
 	#K .* (v_ref - v) #K = droop coefficient #low-layer controller
 	 #uncontrolled net power demand at node p
 	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t) #determine the update cycle of the hlc
-
-	#println("periodic power: ", periodic_power)
-
 	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
 	Pd = periodic_power + fluctuating_power
-	#sum_power = power_ILC .+ power_LI .+ fluctuating_power .+ periodic_power .- (p.incidence * i_L).*v
 
-	#dv = p.ll.C_inv .* sum_power
-	#sum_power = v .* (-p.incidence * i_L)
-	#sum_power = power_ILC .+ power_LI .+ periodic_power .+fluctuating_power
-	di_L = p.ll.L_inv .*(-R.*i_L .+(p.incidence' * v))
-	dv = p.ll.C_inv.* (-1 .*(p.incidence * i_L) .+  K .* (v_ref .- v) .+ Pd./v )
-	############################################################################
-	#sum_power = power_ILC .+ power_LI .+ periodic_power .+fluctuating_power
-	#di_L = p.ll.L_inv .*(-R.*i_L .+(p.incidence' * v))
-	#dv = p.ll.C_inv.* (-1 .*(p.incidence * i_L) .+ sum_power./v)
-	#dv +=
-	############################################################################
+	di= p.ll.L_inv .*(-R.*i .-(p.incidence' * v))
 
+	dv = p.ll.C_inv.*( K.* (v_ref .- v) .+ (p.incidence * i) .- (12.)./(v.+1))
 
+	#print("current: ", i)
+	#print("voltage: ", v)
 	#dv =  p.ll.C_inv .* sum_power ./ v  .- (p.incidence * i_L)
-	 control_power_integrator =  v.* K .* (v_ref .- v)
-	 control_power_integrator_abs = abs.(v.* K .* (v_ref .- v))
+	 control_power_integrator =  v.* 1 .* (v_ref .- v)
+	 control_power_integrator_abs = abs.(v.* 1 .* (v_ref .- v))
+	 ret = [di;dv]
+	 print(ret)
+	  #Compared with python model mg_new.py, line 141
+	return ret
+end
 
-	#println(size(p.incidence'))
-	#println(size(v))
-	#println(size(v))
-	#println(size(control_power_integrator))
-	#println(size(v_ref))
-	#println(size(sum_power))
-	# println(size(control_power_integrator_abs))
-
-	#sum_power = v .* (- p.incidence * i_L)
-	#diag(1/v...)
-	return nothing
+function DCtoymodel_root!(du, u, p)
+	sys_root = DCtoymodel!(du, u, p, 0.)
+	return sys_root
 end
 
 function ACtoymodel!(du, u, p, t)
@@ -114,7 +93,7 @@ function ACtoymodel!(du, u, p, t)
 	#mul!(cache2, p.coupling, sin.(cache1))
 	#mul!(flows, - p.incidence, cache2 )
 	flows = - (p.incidence * p.coupling * sin.(p.incidence' * theta))
-
+ 	#println("periodic power: ", periodic_power)
 
 	@. dtheta = omega
 	@. domega = p.ll.M_inv .* (power_ILC .+ power_LI

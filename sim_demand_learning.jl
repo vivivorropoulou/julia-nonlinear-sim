@@ -26,21 +26,25 @@ end
 
 begin
 ######### DC MODEL FILTER ################################
-	#current_filter = 1:Int(1.5N)
-	#voltage_filter = Int(1.5N)+1:Int(2.5N)
-	#energy_filter = Int(2.5N)+1:Int(3.5N)#3N+1:4N
-	#energy_abs_filter = Int(3.5N)+1:Int(4.5N) #4N+1:5N
+	current_filter = 1:Int(1.5N)
+	voltage_filter = Int(1.5N)+1:Int(2.5N)
+	energy_filter = Int(2.5N)+1:Int(3.5N)#3N+1:4N
+	energy_abs_filter = Int(3.5N)+1:Int(4.5N) #4N+1:5N
 ##########################################################
 ######### AC MODEL FILTER ################################
-	phase_filter = 1:N
-	freq_filter = N+1:2N
-	control_filter = 2N+1:3N
-	energy_filter = 3N+1:4N
-	energy_abs_filter = 4N+1:5N
+	#phase_filter = 1:N
+	#freq_filter = N+1:2N
+	#control_filter = 2N+1:3N
+	#energy_filter = 3N+1:4N
+	#energy_abs_filter = 4N+1:5N
 end
 
 
 ############################################
+# # Full graph for N=4 and degree 3 graph otherwise, change last 3 to 1 for N=2
+begin
+	graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
+end
 
 begin
 	l_day = 3600*24 # DemCurve.l_day
@@ -61,10 +65,7 @@ end
 # NETWORK - this should only run on one process
 ############################################
 
-# # Full graph for N=4 and degree 3 graph otherwise, change last 3 to 1 for N=2
-begin
-	graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
-end
+
 
 # change last "3" to 1 for N=2
 
@@ -134,7 +135,7 @@ demand_amp = t->vcat(demand_amp1(t), demand_amp2(t), demand_amp3(t), demand_amp4
 # demand_ampn = demand_amp_var(70 .+ rand(num_days+1,Int(N/2)).* 30.)  # random negative amp over days by 10%
 # demand_amp = t->vcat(demand_ampp(t), demand_ampn(t))
 
-periodic_demand =  t-> demand_amp(t)./100 .* sin(t*pi/(24*3600))^2
+periodic_demand =  t-> demand_amp(t) .* sin(t*pi/(24*3600))^2
 samples = 24*4
 
 inter = interpolate([.2 * randn(N) for i in 1:(num_days * samples + 1)], BSpline(Linear()))
@@ -166,12 +167,12 @@ compound_pars.coupling = coupfact .* diagm(0=>ones(ne(graph)))
 
 
 begin
-	factor = 0.01#0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
+	factor = 0.05#0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
-	ode_tl1 = ODEProblem(network_dynamics.ACtoymodel!, ic, tspan, compound_pars,
-	callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
-						 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars)
+	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
+	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
 
 sol1 = solve(ode_tl1, Rodas4())
@@ -182,7 +183,9 @@ sol1 = solve(ode_tl1, Rodas4())
 ######################################################################
 
 using Plots
-
+plot(sol1)
+plot(sol1, vars = voltage_filter)
+plot(sol1, vars = current_filter)
 hourly_energy = zeros(24*num_days+1,N)
 for i=1:24*num_days+1
 	for j = 1:N
