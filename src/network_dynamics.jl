@@ -27,7 +27,7 @@ with kp = D, kI = K and chi = -p
 function DCtoymodel!(du, u, p, t)
 	#VARIABLEN
  	K = 1.
-	R = 0.0532
+	R = 0.0532 .* ones(Int(1.5*p.N))
 	v_ref = 48.
 
 	i= view(u, 1:Int(1.5*p.N)) # u = n_lines
@@ -50,22 +50,47 @@ function DCtoymodel!(du, u, p, t)
 
 	di= p.ll.L_inv .*(-R.*i .-(p.incidence' * v))
 
-	dv = p.ll.C_inv.*( K.* (v_ref .- v) .+ (p.incidence * i) .- (12.)./(v.+1))
+	dv = p.ll.C_inv.*( K.* (v_ref .- v) .+ (p.incidence * i) .- Pd./(v.+1))
 
-	#print("current: ", i)
-	#print("voltage: ", v)
-	#dv =  p.ll.C_inv .* sum_power ./ v  .- (p.incidence * i_L)
-	 control_power_integrator =  v.* 1 .* (v_ref .- v)
-	 control_power_integrator_abs = abs.(v.* 1 .* (v_ref .- v))
-	 ret = [di;dv]
-	 print(ret)
+	control_power_integrator =  v.* 1 .* (v_ref .- v)
+	control_power_integrator_abs = abs.(v.* 1 .* (v_ref .- v))
+
 	  #Compared with python model mg_new.py, line 141
-	return ret
+	return nothing
 end
 
-function DCtoymodel_root!(du, u, p)
-	sys_root = DCtoymodel!(du, u, p, 0.)
-	return sys_root
+function DCtoymodelstrenge!(du, u, p, t)
+	#DC Microgrids swarm type network implemented by Lia Strenge in python, equations 4.12
+
+	n_prod = 2
+	n_cons = p.N - n_prod
+	K = ones(n_prod)
+	R = 0.0532 .* ones(Int(1.5*p.N))
+	v_ref = 48.
+	P = (-12.).*ones(n_cons)
+
+
+	i = view(u, 1:Int(1.5*p.N)) # u = n_lines
+	v = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
+
+	#v_prod = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
+	#v_cons = view(u, (Int(2.5*p.N)+1):Int(3.5*p.N))
+
+	di = view(du, 1:Int(1.5*p.N))
+	dv = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
+	#dv_prod = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
+	#dv_cons = view(du, (Int(2.5*p.N)+1):Int(3.5*p.N))
+	print(size(p.incidence))
+	print(size(p.incidence'))
+	print(size(v))
+	print(size(i))
+	di = p.ll.L_inv.*(p.incidence' * v .-R.*i)
+	dv = -p.incidence * i
+	dv[1:n_prod] += K .* (v_ref .- v[1:n_prod])
+	dv[n_prod+1:end] += P ./ (v[n_prod+1:end].+1)
+	dv .*= p.ll.C_inv
+
+	return nothing
 end
 
 function ACtoymodel!(du, u, p, t)

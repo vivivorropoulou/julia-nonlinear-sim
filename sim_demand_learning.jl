@@ -15,6 +15,7 @@ begin
 	using Random
 	using DSP
 	using ToeplitzMatrices
+	using LSODA
 	Random.seed!(42)
 end
 
@@ -170,12 +171,12 @@ begin
 	factor = 0.05#0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
-	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars)
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, ic, tspan, compound_pars)
 	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
 	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
 
-sol1 = solve(ode_tl1, Rodas4())
+sol1 = solve(ode_tl1, lsoda())
 
 
 #######################################################################
