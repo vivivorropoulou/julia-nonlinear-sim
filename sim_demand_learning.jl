@@ -10,12 +10,15 @@ begin
 	using Interpolations
 	using DifferentialEquations
 	using Distributions
+	using ForwardDiff
+	using GraphPlot
 	using LightGraphs
 	using LinearAlgebra
+	using LSODA
 	using Random
 	using DSP
 	using ToeplitzMatrices
-	using LSODA
+	using Roots
 	Random.seed!(42)
 end
 
@@ -44,9 +47,21 @@ end
 ############################################
 # # Full graph for N=4 and degree 3 graph otherwise, change last 3 to 1 for N=2
 begin
-	graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
+	#graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
+	graph = SimpleDiGraph(4)
+	add_edge!(graph, 2,1)
+	add_edge!(graph, 3,1)
+	add_edge!(graph, 4,1)
+	add_edge!(graph, 3,2)
+	add_edge!(graph, 2,4)
+	add_edge!(graph, 3,4)
 end
 
+
+
+
+
+#gplot(graph)
 begin
 	l_day = 3600*24 # DemCurve.l_day
 	l_hour = 3600 # DemCurve.l_hour
@@ -74,15 +89,7 @@ end
 #graph = SimpleGraph(1)
 
 # # Square - needs to be changed only here
-# graph = SimpleGraph(4)
-# add_edge!(_graph_lst, 1,2)
-# add_edge!(_graph_lst, 2,3)
-# add_edge!(_graph_lst, 3,4)
-# add_edge!(_graph_lst, 4,1)
 
-
-# using GraphPlot
-# gplot(graph)
 
 # # Line - needs to be changed only here
 # graph = SimpleGraph(4)
@@ -168,12 +175,18 @@ compound_pars.coupling = coupfact .* diagm(0=>ones(ne(graph)))
 
 
 begin
+	#fix_point1 = zeros(Int(1.5*N))
+	#fix_point2 = 48. .* ones(Int(1.5*N))
+	#fix_point = [fix_point1; fix_point2]
 	factor = 0.05#0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
 	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, ic, tspan, compound_pars)
 	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
 	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
+	#ode_tl1_root = ODEProblem(network_dynamics.DCtoymodelstrenge_root, ic, 0, compound_pars)
+	#fp = Array{Float64}(find_zero(network_dynamics.DCtoymodelstrenge_root, fix_point))
+	#jac = ForwardDiff.jacobian(fp, ode_tl1_root)
 end
 
 sol1 = solve(ode_tl1, lsoda())

@@ -2,7 +2,6 @@
 This is a module that contains functions with specified setups for numerical
 experiments.
 It depends on the modules `network_dynamics.jl` and `observables.jl`
-
 # Examples
 ```julia-repl
 julia> include("src/system_structs.jl")

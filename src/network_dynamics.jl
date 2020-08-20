@@ -59,6 +59,7 @@ function DCtoymodel!(du, u, p, t)
 	return nothing
 end
 
+
 function DCtoymodelstrenge!(du, u, p, t)
 	#DC Microgrids swarm type network implemented by Lia Strenge in python, equations 4.12
 
@@ -66,9 +67,8 @@ function DCtoymodelstrenge!(du, u, p, t)
 	n_cons = p.N - n_prod
 	K = ones(n_prod)
 	R = 0.0532 .* ones(Int(1.5*p.N))
-	v_ref = 48.
+	v_ref = (48.) .* ones(n_prod)
 	P = (-12.).*ones(n_cons)
-
 
 	i = view(u, 1:Int(1.5*p.N)) # u = n_lines
 	v = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
@@ -80,18 +80,22 @@ function DCtoymodelstrenge!(du, u, p, t)
 	dv = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
 	#dv_prod = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
 	#dv_cons = view(du, (Int(2.5*p.N)+1):Int(3.5*p.N))
-	print(size(p.incidence))
-	print(size(p.incidence'))
-	print(size(v))
-	print(size(i))
+
 	di = p.ll.L_inv.*(p.incidence' * v .-R.*i)
 	dv = -p.incidence * i
 	dv[1:n_prod] += K .* (v_ref .- v[1:n_prod])
 	dv[n_prod+1:end] += P ./ (v[n_prod+1:end].+1)
 	dv .*= p.ll.C_inv
 
-	return nothing
+	ret = [di;dv]
+
+	return ret
 end
+
+#function  DCtoymodelstrenge_root(du, u, p, t)
+#	ret_root =  DCtoymodelstrenge!(du, u, p, 0)
+#	return ret_root
+#end
 
 function ACtoymodel!(du, u, p, t)
 	theta = view(u, 1:p.N)
