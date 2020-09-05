@@ -65,42 +65,32 @@ function DCtoymodelstrenge!(du, u, p, t)
 
 	n_prod = 2
 	n_cons = p.N - n_prod
-	K = ones(n_prod)
-	R = 0.0532 .* ones(Int(1.5*p.N))
-	v_ref = (48.) .* ones(n_prod)
-	P = (-12.).*ones(n_cons)
+	P = -12.
+	n_lines = Int(1.5*p.N)
 
-	i = view(u, 1:Int(1.5*p.N)) # u = n_lines
-	v = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
+	i = u[1:n_lines]
+    v = u[(n_lines+1):Int(2.5*p.N)]
+	print(v)
 
-	#v_prod = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
-	#v_cons = view(u, (Int(2.5*p.N)+1):Int(3.5*p.N))
+    di = @view du[1:n_lines]
+    dv = @view du[(n_lines+1):Int(2.5*p.N)]
 
-	di = view(du, 1:Int(1.5*p.N))
-	dv = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
-	#dv_prod = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
-	#dv_cons = view(du, (Int(2.5*p.N)+1):Int(3.5*p.N))
 
-	di = p.ll.L_inv.*(p.incidence' * v .-R.*i)
-	dv = -p.incidence * i
-	dv[1:n_prod] += K .* (v_ref .- v[1:n_prod])
-	dv[n_prod+1:end] += P ./ (v[n_prod+1:end].+1)
-	dv .*= p.ll.C_inv
+	inc_v = p.incidence' * v
+    inc_i = p.incidence * i
 
-	ret = [di;dv]
-
-	return ret
+    @. di .= p.ll.L_inv.*(inc_v .-(p.ll.R.*i))
+    @. dv .= -1. .* inc_i
+    @. dv[1:n_prod] += p.ll.K .* (p.ll.v_ref.- v[1:n_prod])
+    @. dv[n_prod+1:end] += P ./ (v[n_prod+1:end].+1)
+    @. dv .*= p.ll.C_inv
 end
-
-#function  DCtoymodelstrenge_root(du, u, p, t)
-#	ret_root =  DCtoymodelstrenge!(du, u, p, 0)
-#	return ret_root
-#end
 
 function ACtoymodel!(du, u, p, t)
 	theta = view(u, 1:p.N)
 	omega = view(u, (p.N+1):(2*p.N))
 	chi = view(u, (2*p.N+1):(3*p.N))
+
 
 	dtheta = view(du, 1:p.N)
 	domega = view(du, (p.N+1):(2*p.N))
@@ -146,7 +136,6 @@ function ACtoymodel_lin!(du, u, p, t)
 	theta = view(u, 1:p.N)
 	omega = view(u, (p.N+1):(2*p.N))
 	chi = view(u, (2*p.N+1):(3*p.N))
-
 	dtheta = view(du, 1:p.N)
 	domega = view(du, (p.N+1):(2*p.N))
 	dchi = view(du, (2*p.N+1):(3*p.N))

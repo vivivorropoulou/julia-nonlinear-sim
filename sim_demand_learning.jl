@@ -47,14 +47,14 @@ end
 ############################################
 # # Full graph for N=4 and degree 3 graph otherwise, change last 3 to 1 for N=2
 begin
-	#graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
-	graph = SimpleDiGraph(4)
-	add_edge!(graph, 2,1)
-	add_edge!(graph, 3,1)
-	add_edge!(graph, 4,1)
-	add_edge!(graph, 3,2)
-	add_edge!(graph, 2,4)
-	add_edge!(graph, 3,4)
+	graph = random_regular_graph(iseven(3N) ? N : (N-1), 3)
+	#graph = SimpleDiGraph(4)
+	#add_edge!(graph, 2,1)
+	#add_edge!(graph, 3,1)
+	#add_edge!(graph, 4,1)
+	#add_edge!(graph, 3,2)
+	#add_edge!(graph, 2,4)
+	#add_edge!(graph, 3,4)
 end
 
 
@@ -69,7 +69,7 @@ begin
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=52,T_inv=1/0.05,kI=10)
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=525,T_inv=1/0.05,kI=0.005)
 	# low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
-	low_layer_control = system_structs.LeakyIntegratorPars(M_inv=[1/5.; 1/4.8; 1/4.1; 1/4.8],kP= [400.; 110.; 100.; 200.],T_inv=[1/0.04; 1/0.045; 1/0.047; 1/0.043],kI=[0.05; 0.004; 0.05; 0.001], L_inv= 1/0.237e-4.*ones(ne(graph)) , C_inv = 1/0.01*ones(nv(graph)))
+	low_layer_control = system_structs.LeakyIntegratorPars(M_inv=[1/5.; 1/4.8; 1/4.1; 1/4.8],kP= [400.; 110.; 100.; 200.],T_inv=[1/0.04; 1/0.045; 1/0.047; 1/0.043],kI=[0.05; 0.004; 0.05; 0.001], L_inv= 1/0.237e-4 , C_inv = 1/0.01, K = 1., v_ref = 48., R = 0.0532)
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=[0.1; 10; 100; 1000],T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=[1/0.05; 1/0.5; 1/5; 1/50],kI=repeat([0.005], inner=N)) # different for each node, change array
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=repeat([1/0.05], inner = N),kI=[0.005; 0.5; 5; 500]) # different for each node, change array
@@ -175,18 +175,13 @@ compound_pars.coupling = coupfact .* diagm(0=>ones(ne(graph)))
 
 
 begin
-	#fix_point1 = zeros(Int(1.5*N))
-	#fix_point2 = 48. .* ones(Int(1.5*N))
-	#fix_point = [fix_point1; fix_point2]
+	fp = [0. 0. 0. 0. 0. 0. 48. 48. 48. 48.]
 	factor = 0.05#0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
-	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, ic, tspan, compound_pars)
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, fp, tspan, compound_pars)
 	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
 	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
-	#ode_tl1_root = ODEProblem(network_dynamics.DCtoymodelstrenge_root, ic, 0, compound_pars)
-	#fp = Array{Float64}(find_zero(network_dynamics.DCtoymodelstrenge_root, fix_point))
-	#jac = ForwardDiff.jacobian(fp, ode_tl1_root)
 end
 
 sol1 = solve(ode_tl1, lsoda())
@@ -197,9 +192,26 @@ sol1 = solve(ode_tl1, lsoda())
 ######################################################################
 
 using Plots
-plot(sol1)
-plot(sol1, vars = voltage_filter)
-plot(sol1, vars = current_filter)
+
+############ DC VOLTAGE plot #########################################
+voltage_plot= zeros(24*num_days+1,N)
+for i=1:24*num_days+1
+	for j = 1:N
+		voltage_plot[i,j] = sol1((i-1)*3600)[voltage_filter[j]]
+	end
+end
+
+plot(voltage_plot)
+############ DC CURRENT plot #########################################
+current_plot= zeros(24*num_days+1,Int(1.5*N))
+for k=1:24*num_days+1
+	for j = 1:Int(1.5*N)
+		current_plot[k,j] = sol1((k-1)*3600)[current_filter[j]]
+	end
+end
+
+plot(current_plot)
+############ ENERGY plot #########################################
 hourly_energy = zeros(24*num_days+1,N)
 for i=1:24*num_days+1
 	for j = 1:N
