@@ -26,36 +26,35 @@ with kp = D, kI = K and chi = -p
 
 function DCtoymodel!(du, u, p, t)
 	#VARIABLEN
- 	K = 1.
-	R = 0.0532 .* ones(Int(1.5*p.N))
-	v_ref = 48.
+	P = -12.
+	n_lines = Int(1.5*p.N)
 
-	i= view(u, 1:Int(1.5*p.N)) # u = n_lines
-	v = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
+	i = u[1:n_lines]
+    v = u[(n_lines+1):Int(2.5*p.N)]
 
-	di = view(du, 1:Int(1.5*p.N))
-	dv = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
+    di = @view du[1:n_lines]
+    dv = @view du[(n_lines+1):Int(2.5*p.N)]
 
-	control_power_integrator = view(du,Int(2.5*p.N+1):Int(3.5*p.N))
-	control_power_integrator_abs = view(du,Int(3.5*p.N+1):Int(4.5*p.N))
-	#i = (K * (v_ref .- v)).*i
-	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
+	control_power_integrator = @view du[Int(2.5*p.N)+1:Int(3.5*p.N)]
+	control_power_integrator_abs = @view du[Int(3.5*p.N)+1:Int(4.5*p.N)]
+	#control_power_integrator = view(du,Int(2.5*p.N+1):Int(3.5*p.N))
+	#control_power_integrator_abs = view(du,Int(3.5*p.N+1):Int(4.5*p.N))
 	power_ILC = p.hl.current_background_power #(t)
-	#power_LI = v .* i_gen
-	#K .* (v_ref - v) #K = droop coefficient #low-layer controller
-	 #uncontrolled net power demand at node p
+
 	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t) #determine the update cycle of the hlc
 	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
 	Pd = periodic_power + fluctuating_power
 
-	di= p.ll.L_inv .*(-R.*i .-(p.incidence' * v))
+	inc_v = p.incidence' * v
+    inc_i = p.incidence * i
 
-	dv = p.ll.C_inv.*( K.* (v_ref .- v) .+ (p.incidence * i) .- Pd./(v.+1))
+	@. di= p.ll.L_inv .*(-(p.ll.R.*i) .-inc_v)
+	@. dv = p.ll.C_inv.*( p.ll.K.* (p.ll.v_ref .- v) .+ inc_i .- Pd./(v.+1))
 
-	control_power_integrator =  v.* 1 .* (v_ref .- v)
-	control_power_integrator_abs = abs.(v.* 1 .* (v_ref .- v))
 
-	  #Compared with python model mg_new.py, line 141
+	@. control_power_integrator =  v.* 1 .* (p.ll.v_ref .- v)
+	@. control_power_integrator_abs = abs.(v.* 1 .* (p.ll.v_ref .- v))
+
 	return nothing
 end
 
@@ -84,6 +83,26 @@ function DCtoymodelstrenge!(du, u, p, t)
     @. dv[1:n_prod] += p.ll.K .* (p.ll.v_ref.- v[1:n_prod])
     @. dv[n_prod+1:end] += P ./ (v[n_prod+1:end].+1)
     @. dv .*= p.ll.C_inv
+end
+function DCtoymodel_fest_demand!(du, u, p, t)
+	#DC Microgrids swarm type network implemented by Lia Strenge in python, equations 4.12
+
+	P = -12.
+	n_lines = Int(1.5*p.N)
+
+	i = u[1:n_lines]
+    v = u[(n_lines+1):Int(2.5*p.N)]
+
+    di = @view du[1:n_lines]
+    dv = @view du[(n_lines+1):Int(2.5*p.N)]
+
+
+	inc_v = p.incidence' * v
+    inc_i = p.incidence * i
+
+	@. di= p.ll.L_inv .*(-(p.ll.R.*i) .-inc_v)
+	@. dv = p.ll.C_inv.*( p.ll.K.* (p.ll.v_ref .- v) .+ inc_i .- P./(v.+1))
+
 end
 
 function ACtoymodel!(du, u, p, t)
