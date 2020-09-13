@@ -7,6 +7,7 @@ end
 begin
 	using JLD2, FileIO, GraphIO, CSV, DataFrames
 	using Distributed
+	#using PyPlot
 	using Interpolations
 	using DifferentialEquations
 	using Distributions
@@ -179,47 +180,57 @@ begin
 	factor = 0.05#0.01*rand(compound_pars.D * compound_pars.N)#0.001#0.00001
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
-	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, fp, tspan, compound_pars)
+	tspan2 = (0, 1.0)
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, fp, tspan2, compound_pars)
 	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
 	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
 
-sol1 = solve(ode_tl1, Rodas4())
+sol1 = solve(ode_tl1, lsoda())
 
-#begin
-#	fp = sol1[end]
-#	ic = copy(fp)
 
-#	ic *= 0.99 .+ 0.01 .* rand(size(fp))
-#	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, fp, tspan, compound_pars)
-#end
-#sol1 = solve(ode_tl1, lsoda())
+begin
+	fp = sol1[end]
+	ic = copy(fp)
+	#print(ic)
+
+	ic = (0.99 .+ 0.01 .* rand(1,20)).*ic
+	#print(ic)
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, ic, tspan2, compound_pars)
+end
+sol1 = solve(ode_tl1, lsoda())
+
+
+plot(sol1, vars = current_filter)
+solution_to_csv = CSV.write("$dir/DC_solution.csv", DataFrame(sol1))
+
+
 
 #######################################################################
 #                               PLOTTING                             #
 ######################################################################
 
+
 using Plots
 
 ############ DC VOLTAGE plot #########################################
-voltage_plot= zeros(24*num_days+1,N)
-for i=1:24*num_days+1
-	for j = 1:N
-		voltage_plot[i,j] = sol1((i-1)*3600)[voltage_filter[j]]
-	end
-end
 
-plot(voltage_plot)
+plot(sol1, vars = voltage_filter,title = "Voltage per node ", label = ["Node 1" "Node 2" "Node 3" "Node 4"])
+xlabel!("Time in s")
+ylabel!("Voltage in V")
+savefig("$dir/plots/DC_voltages_per_node_python.png")
+
+
 ############ DC CURRENT plot #########################################
-current_plot= zeros(24*num_days+1,Int(1.5*N))
-for k=1:24*num_days+1
-	for j = 1:Int(1.5*N)
-		current_plot[k,j] = sol1((k-1)*3600)[current_filter[j]]
-	end
-end
 
-plot(current_plot)
+plot(sol1, vars = current_filter, title = "Current per edge ", label = ["Edge 1" "Edge 2" "Edge 3" "Edge 4" "Edge 5" "Edge 6"])
+xlabel!("Time in s")
+ylabel!("Current in A")
+savefig("$dir/plots/DC_currents_per_edge_python.png")
+
 ############ ENERGY plot #########################################
+
+
 hourly_energy = zeros(24*num_days+1,N)
 for i=1:24*num_days+1
 	for j = 1:N
