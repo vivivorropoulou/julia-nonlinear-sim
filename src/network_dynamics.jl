@@ -25,20 +25,17 @@ with kp = D, kI = K and chi = -p
 """
 
 function DCtoymodel!(du, u, p, t)
-	#VARIABLEN
-	P = -12.
-	n_lines = Int(1.5*p.N)
 
+	n_lines = Int(1.5*p.N)
 	i = u[1:n_lines]
     v = u[(n_lines+1):Int(2.5*p.N)]
 
     di = @view du[1:n_lines]
     dv = @view du[(n_lines+1):Int(2.5*p.N)]
 
-	control_power_integrator = @view du[Int(2.5*p.N)+1:Int(3.5*p.N)]
+	control_power_integrator =  @view du[Int(2.5*p.N)+1:Int(3.5*p.N)]
 	control_power_integrator_abs = @view du[Int(3.5*p.N)+1:Int(4.5*p.N)]
-	#control_power_integrator = view(du,Int(2.5*p.N+1):Int(3.5*p.N))
-	#control_power_integrator_abs = view(du,Int(3.5*p.N+1):Int(4.5*p.N))
+
 	power_ILC = p.hl.current_background_power #(t)
 
 	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t) #determine the update cycle of the hlc
@@ -48,19 +45,22 @@ function DCtoymodel!(du, u, p, t)
 	inc_v = p.incidence' * v
     inc_i = p.incidence * i
 
-	@. di= p.ll.L_inv .*(-(p.ll.R.*i) .-inc_v)
-	@. dv = p.ll.C_inv.*( p.ll.K.* (p.ll.v_ref .- v) .+ inc_i .- Pd./(v.+1))
+	i_gen = p.ll.K .* (p.ll.v_ref .- v)
+	i_load = Pd./(v.+1)
+
+	@. di = p.ll.L_inv .*(-(p.ll.R.*i) .+ inc_v)
+	@. dv = p.ll.C_inv.*( i_gen.- inc_i .- i_load)
 
 
-	@. control_power_integrator =  v.* 1 .* (p.ll.v_ref .- v)
-	@. control_power_integrator_abs = abs.(v.* 1 .* (p.ll.v_ref .- v))
+	@. control_power_integrator = v.*i_gen
+	@. control_power_integrator_abs = abs.(v.* i_gen)
 
 	return nothing
 end
 
 
 function DCtoymodelstrenge!(du, u, p, t)
-	#DC Microgrids swarm type network implemented by Lia Strenge in python, equations 4.12
+	#DC Microgrids swarm type network producer and consumer, implemented by Lia Strenge in python, equations 4.12
 
 	n_prod = 2
 	n_cons = p.N - n_prod
@@ -69,7 +69,7 @@ function DCtoymodelstrenge!(du, u, p, t)
 
 	i = u[1:n_lines]
     v = u[(n_lines+1):Int(2.5*p.N)]
-	print(v)
+	#print(v)
 
     di = @view du[1:n_lines]
     dv = @view du[(n_lines+1):Int(2.5*p.N)]
@@ -83,8 +83,13 @@ function DCtoymodelstrenge!(du, u, p, t)
     @. dv[1:n_prod] += p.ll.K .* (p.ll.v_ref.- v[1:n_prod])
     @. dv[n_prod+1:end] += P ./ (v[n_prod+1:end].+1)
     @. dv .*= p.ll.C_inv
+
 end
-function DCtoymodel_fest_demand!(du, u, p, t)
+
+
+
+
+function DCtoymodel_prosumer_fest_demand!(du, u, p, t)
 	#DC Microgrids swarm type network implemented by Lia Strenge in python, equations 4.12
 
 	P = -12.
@@ -100,8 +105,8 @@ function DCtoymodel_fest_demand!(du, u, p, t)
 	inc_v = p.incidence' * v
     inc_i = p.incidence * i
 
-	@. di= p.ll.L_inv .*(-(p.ll.R.*i) .-inc_v)
-	@. dv = p.ll.C_inv.*( p.ll.K.* (p.ll.v_ref .- v) .+ inc_i .- P./(v.+1))
+	@. di = p.ll.L_inv .*(-(p.ll.R.*i) .+ inc_v)
+	@. dv = p.ll.C_inv.*( p.ll.K.* (p.ll.v_ref .- v) .- inc_i .- P./(v.+1))
 
 end
 
