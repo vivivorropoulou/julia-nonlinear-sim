@@ -182,12 +182,12 @@ begin
 	ic = factor .* ones(compound_pars.D * compound_pars.N)
 	tspan = (0., num_days * l_day)
 	tspan2 = (0, 1.0)
-	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, fp, tspan, compound_pars)
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, fp, tspan2, compound_pars)
 	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
 	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
 
-sol1 = solve(ode_tl1, Rodas4())
+sol1 = solve(ode_tl1, lsoda())
 
 
 begin
@@ -197,11 +197,11 @@ begin
 
 	ic = (0.99 .+ 0.01 .* rand(1,20)).*ic #rand(size(fp)) brings as an result the dimension 1 or 20, not random numbers as an array of [1,20]
 	#print(ic)
-	ode_tl1 = ODEProblem(network_dynamics.DCtoymodel!, ic, tspan, compound_pars,
-	callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
-						 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
+	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, ic, tspan2, compound_pars)
+	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
+	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
-sol1 = solve(ode_tl1, Rodas4())
+sol1 = solve(ode_tl1, lsoda())
 #solution_to_csv = CSV.write("$dir/DC_solution.csv", DataFrame(sol1))
 
 ################################### SOLVE AC ##########################################
