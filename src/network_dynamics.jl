@@ -106,7 +106,7 @@ function DCtoymodel_prosumer_fest_demand!(du, u, p, t)
     inc_i = p.incidence * i
 
 	@. di = p.ll.L_inv .*(-(p.ll.R.*i) .+ inc_v)
-	@. dv = p.ll.C_inv.*( p.ll.K.* (p.ll.v_ref .- v) .- inc_i .- P./(v.+1))
+	@. dv = p.ll.C_inv.*( p.ll.K.* (p.ll.v_ref .- v) .+ inc_i .- P./(v.+1))
 
 end
 

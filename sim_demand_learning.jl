@@ -184,24 +184,24 @@ begin
 	tspan2 = (0, 1.0)
 	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, fp, tspan2, compound_pars)
 	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
+
 	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
 end
-
 sol1 = solve(ode_tl1, lsoda())
-
 
 begin
 	fp = sol1[end]
 	ic = copy(fp)
-	#print(ic)
-
 	ic = (0.99 .+ 0.01 .* rand(1,20)).*ic #rand(size(fp)) brings as an result the dimension 1 or 20, not random numbers as an array of [1,20]
-	#print(ic)
 	ode_tl1 = ODEProblem(network_dynamics.DCtoymodelstrenge!, ic, tspan2, compound_pars)
 	#callback=CallbackSet(PeriodicCallback(network_dynamics.HourlyUpdate(), l_hour),
 	#					 PeriodicCallback(network_dynamics.DailyUpdate_X, l_day)))
+
 end
+
 sol1 = solve(ode_tl1, lsoda())
+
+
 #solution_to_csv = CSV.write("$dir/DC_solution.csv", DataFrame(sol1))
 
 ################################### SOLVE AC ##########################################
@@ -229,7 +229,7 @@ using Plots
 plot(sol1, vars = voltage_filter,title = "Voltage per node ", label = ["Node 1" "Node 2" "Node 3" "Node 4"])
 xlabel!("Time in s")
 ylabel!("Voltage in V")
-savefig("$dir/plots/DC_voltages_per_node_without_callback.png")
+savefig("$dir/plots/DC_prosumer_voltage_julia.png")
 
 
 ############ DC CURRENT plot #########################################
@@ -237,7 +237,7 @@ savefig("$dir/plots/DC_voltages_per_node_without_callback.png")
 plot(sol1, vars = current_filter, title = "Current per edge ", label = ["Edge 1" "Edge 2" "Edge 3" "Edge 4" "Edge 5" "Edge 6"])
 xlabel!("Time in s")
 ylabel!("Current in A")
-savefig("$dir/plots/DC_currents_per_edge_without_callback.png")
+savefig("$dir/plots/DC_prosumer_current_julia.png")
 
 ############ ENERGY plot #########################################
 
