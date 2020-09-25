@@ -3,9 +3,11 @@ begin
 	using LinearAlgebra
 	using DifferentialEquations
 	using GraphPlot
+	using Random
 	using Plots
 	using Parameters
 	using LSODA
+	Random.seed!(42)
 end
 
 begin
@@ -32,7 +34,7 @@ end
 end
 
 ################# parameters initialization ###################################
-param = parameterss(N = 4, K = 1. , R = 0.0532, L_inv = 1/0.2, C_inv = 1/0.01,  v_ref = 48. , incidence = incidence_matrix(graph,oriented=true), n_prod = 2, n_cons = 2)
+param = parameterss(N = 4, K = 1. , R = 0.0532, L_inv = 1/0.237e-4, C_inv = 1/0.01,  v_ref = 48. , incidence = incidence_matrix(graph,oriented=true), n_prod = 2, n_cons = 2)
 ###############################################################################
 
 
@@ -56,10 +58,7 @@ function DCToymodel!(du, u, p, t)
    v = u[(n_lines+1):end]
    di = @view du[1:n_lines]
    dv = @view du[(n_lines+1):end]
-   #i = view(u, 1:Int(1.5*p.N)) # u = n_lines
-   #v = view(u, (Int(1.5*p.N)+1):Int(2.5*p.N))
-   #di = view(du, 1:Int(1.5*p.N))
-   #dv = view(du, (Int(1.5*p.N)+1):Int(2.5*p.N))
+
    inc_v = p.incidence' * v
    inc_i = p.incidence * i
 
@@ -69,7 +68,6 @@ function DCToymodel!(du, u, p, t)
    @. dv[p.n_prod+1:end] += P ./ (v[p.n_prod+1:end].+1)
    @. dv .*= p.C_inv
 
-   return nothing
 end
 
 
@@ -77,10 +75,21 @@ end
 
 begin
 	fp = [0. 0. 0. 0. 0. 0. 48. 48. 48. 48.] #initial condition
+	factor = 0.05
+	ic = factor .* ones(10)
 	tspan = (0. , num_days * l_day)
-	ode = ODEProblem(DCToymodel!, fp, tspan, param)
+	tspan2 = (0., 1.0)
+	ode = ODEProblem(DCToymodel!, fp, tspan2, param)
 end
 
+sol = solve(ode, lsoda())
+
+begin
+	fp = sol[end]
+	ic = copy(fp)
+	ic = (0.99 .+ 0.01 .*rand(1,10)).*ic
+	ode = ODEProblem(DCToymodel!, ic, tspan2, param)
+end
 sol = solve(ode, lsoda())
 
 plot(sol, vars = current_filter)
