@@ -283,7 +283,7 @@ ylabel!("Energy in W")
 savefig("$dir/plots/Energy_with_callbacks_producer_consumer.png")
 
 #sum up the node powers
-energy_sum = sol[11,:]+sol[12,:]+sol[13,:]+sol[14,:]
+energy_sum = sol[energy_filter[1],:]+sol[energy_filter[2],:]+sol[energy_filter[3],:]+sol[energy_filter[4],:]
 
 plot(energy_sum ,title = "Sum of Energy ",label = "Energy sum")
 xlabel!("Time in s")
