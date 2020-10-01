@@ -20,12 +20,17 @@ begin
 end
 
 begin
-	N = 4
-	N_half = Int(N/2)
+	dir = @__DIR__
+	N = 4 #Number of nodes
+	num_prod = 2 # producer nodes
+	nom_cons = N - num_prod
+
 	num_days = 10
 	l_day = 3600*24 # DemCurve.l_day
 	l_hour = 3600 # DemCurve.l_hour
 	l_minute = 60
+
+
 	vc1 = 1:N # ilc_nodes (here: without communication)
 	cover1 = Dict([v => [] for v in vc1])# ilc_cover
 	u = [zeros(1000,1);1;zeros(1000,1)];
@@ -99,17 +104,17 @@ end
 end
 
 function set_parameters(N)
-	low_layer_control = LeakyIntegratorPars(K = 1. , R = 0.0532, L_inv = 1/0.237e-4, C_inv = 1/0.01,  v_ref = 48. ,  n_prod = 2, n_cons = 2)
+	low_layer_control = LeakyIntegratorPars(K = 1. , R = 0.0532, L_inv = 1/0.237e-4, C_inv = 1/0.01,  v_ref = 48. ,  n_prod = num_prod, n_cons = N.-num_prod)
 	u = [zeros(1000,1);1;zeros(1000,1)];
 	fc = 1/6;
 	a = digitalfilter(Lowpass(fc), Butterworth(2));
 	Q1 = filtfilt(a,u);
 
-	higher_layer_control = ILCPars(kappa = 0.35, mismatch_yesterday=zeros(24,N), daily_background_power=zeros(24,N), current_background_power=zeros(N), ilc_nodes=1:N, ilc_covers = [], Q = Toeplitz(Q1[1001:1001+24-1],Q1[1001:1001+24-1]))
-	periodic_infeed = t -> zeros(N_half)
-	periodic_demand = t -> zeros(N_half)
-	fluctuating_infeed = t -> zeros(N_half)
-	residual_demand = t -> zeros(N_half)
+	higher_layer_control = ILCPars(kappa = 0.35, mismatch_yesterday=zeros(24,num_prod), daily_background_power=zeros(24,num_prod), current_background_power=zeros(num_prod), ilc_nodes=1:N, ilc_covers = [], Q = Toeplitz(Q1[1001:1001+24-1],Q1[1001:1001+24-1]))
+	periodic_infeed = t -> zeros(num_prod)
+	periodic_demand = t -> zeros(num_prod)
+	fluctuating_infeed = t -> zeros(num_prod)
+	residual_demand = t -> zeros(num_prod)
 
 	return UlMopars(N,low_layer_control,
 					higher_layer_control,
@@ -128,36 +133,36 @@ end
 
 
 function DCToymodel!(du, u, p, t)
-   #DC Microgrids swarm type network implemented by Lia Strenge in python, equations 4.12
-   P = -12
+   #P = -12
    n_lines = Int(1.5*p.N)
 
+   #state variables
    i = u[1:n_lines]
    v = u[(n_lines+1):Int(2.5*p.N)]
 
    di = @view du[1:n_lines]
    dv = @view du[(n_lines+1):Int(2.5*p.N)]
-
    control_power_integrator = @view du[Int(2.5*p.N)+1:Int(3.5*p.N)]
 
-   #i_ILC = p.hl.current_background_power/v[1:p.ll.n_prod]
+   #ILC power is calculated in the callback functions, since the power is not a state of the DC microgrids system
    inc_v = p.incidence' * v
-   inc_i = p.incidence * i #i_ILC # ausdrücken im integrator.u[1:n_lines]
-   #POWER ILC HINZUFÜGEN
+   inc_i = p.incidence * i
 
+   #periodic demand instead of constant demand
    periodic_power = -p.periodic_demand(t) .+p.periodic_infeed(t)
    fluctuating_power = -p.residual_demand(t) .+ p.fluctuating_infeed(t)
    Pd = fluctuating_power + periodic_power
 
-
+   #network topology
    @. di .= p.ll.L_inv.*(inc_v .-(p.ll.R.*i))
    @. dv .= -1. .* inc_i
    @. dv[1:p.ll.n_prod] += p.ll.K .* (p.ll.v_ref.- v[1:p.ll.n_prod]) #integrator.u[voltage_filter] power ilc hinzufügen
    @. dv[p.ll.n_prod+1:end] += Pd ./ (v[p.ll.n_prod+1:end].+1)
    @. dv .*= p.ll.C_inv
 
+   #@. control_power_integrator .= v .* inc_i
 
-   control_power_integrator = v .* inc_i
+
 end
 
 
@@ -181,30 +186,51 @@ function (hu::HourlyUpdate)(integrator)
 	hour = mod(round(Int, integrator.t/3600.), 24) + 1
 	last_hour = mod(hour-2, 24) + 1
 
-	#power index anpassen mit N
-	power_idx = Int(2.5*integrator.p.N)+1:Int(3.5*integrator.p.N)
+	n_lines = Int(1.5*integrator.p.N)
 
-	#producer index für die callbacks 1:n_prod , +1 n_cons
-	producer_idx = 1:integrator.p.ll.n_prod
-	consumer_idx = integrator.p.N .- producer_idx
-	integrator.p.hl.mismatch_yesterday[last_hour,:] .= (integrator.p.incidence *  integrator.u[1:Int(1.5*integrator.p.N)]) .*  integrator.u[voltage_filter]
+	#indexes
+	power_idx = Int(2.5*integrator.p.N)+1:Int(3.5*integrator.p.N) # power index
+	producer_idx = 1:integrator.p.ll.n_prod # producer index
+	consumer_idx = integrator.p.N .- producer_idx # consumer index
 
-#	integrator.p.hl.mismatch_yesterday[last_hour,:] .= integrator.u[power_idx] #Strom spannung aktuell multiplizieren wegen DC da leistung kein zustand!!!!
-	integrator.u[power_idx] .= (integrator.p.incidence *  integrator.u[1:Int(1.5*integrator.p.N)]) .*  integrator.u[voltage_filter]
-#	integrator.u[power_abs_idx] .= 0.
 
-	# println("hour $hour")
+	#Define current background power
+	integrator.p.hl.current_background_power[producer_idx] .= integrator.p.hl.daily_background_power[hour, :]
 
-	#current background power definieren
-	#integrator.p.hl.current_background_power[1:n_prod] .= integrator.p.hl.daily_background_power[hour, :]
-	integrator.p.hl.current_background_power .= integrator.p.hl.daily_background_power[hour, :]
+	integrator_inc_i = integrator.p.incidence *  integrator.u[1:n_lines] #edge currents per node summed up
+
+	#sum up all node currents
+	integrator_inc_i_sum = 0
+
+	for j = 1:integrator.p.N
+		integrator_inc_i_sum += integrator_inc_i[j]
+		#print(integrator_inc_i_sum)
+		#print("           ")
+	end
+
+	#power calculation
+	integrator.u[power_idx] .= integrator_inc_i .*  integrator.u[voltage_filter] # Current is multiplied here with voltage
+	integrator_power = integrator.u[power_idx]
+
+	#ILC power in form of ILC current is calculated here
+	integrator_i_ILC = integrator.p.hl.current_background_power[producer_idx]./integrator_power[producer_idx] #ILC power in form of current
+	integrator_inc_i[producer_idx] .+= integrator_i_ILC #We get the ILC power from the producer nodes
+
+	#update the power per node
+	integrator.u[power_idx] .= integrator_inc_i .*  integrator.u[voltage_filter]
+
+
+	integrator.p.hl.mismatch_yesterday[last_hour,:] .= integrator_power[producer_idx]
+
+
+
 	nothing
 end
 
 
 
 function DailyUpdate_X(integrator)
-	#producer nur die hälte
+
 	integrator.p.hl.daily_background_power = integrator.p.hl.Q * (integrator.p.hl.daily_background_power + integrator.p.hl.kappa * integrator.p.hl.mismatch_yesterday)
 	nothing
 end
@@ -213,11 +239,6 @@ demand_amp1 = demand_amp_var(repeat([80 80 80 10 10 10 40 40 40 40 40], outer=In
 demand_amp2 = demand_amp_var(repeat([10 10 10 80 80 80 40 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
 demand_amp = t->vcat(demand_amp1(t), demand_amp2(t))
 
-
-# # random positive amp over days by 30%
-# demand_ampp = demand_amp_var(70 .+ rand(num_days+1,Int(N/2)).* 30.)
-# demand_ampn = demand_amp_var(70 .+ rand(num_days+1,Int(N/2)).* 30.)  # random negative amp over days by 10%
-# demand_amp = t->vcat(demand_ampp(t), demand_ampn(t))
 periodic_demand =  t-> demand_amp(t) .* sin(t*pi/(24*3600))^2
 
 samples = 24*2
@@ -225,7 +246,8 @@ samples = 24*2
 inter = interpolate([.2 * randn(2) for i in 1:(num_days * samples + 1)], BSpline(Linear()))
 residual_demand = t -> inter(1. + t / (24*3600) * samples)
 
-##### solving ###############################
+
+################### set parameters ############################
 param = set_parameters(N)
 param.periodic_demand = periodic_demand
 param.residual_demand = residual_demand
@@ -233,6 +255,7 @@ param.hl.daily_background_power .= 0
 param.hl.current_background_power .= 0
 param.hl.mismatch_yesterday .= 0.
 
+####################### solving ###############################
 begin
 	fp = [0. 0. 0. 0. 0. 0. 48. 48. 48. 48. 0. 0. 0. 0.] #initial condition
 	factor = 0.05
@@ -246,9 +269,25 @@ begin
 end
 sol = solve(ode, Rodas4())
 
+######################## Plotting ########################################
+hourly_energy = zeros(24*num_days+1,N)
+for i=1:24*num_days+1
+	for j = 1:N
+		hourly_energy[i,j] = sol((i-1)*3600)[energy_filter[j]]
+	end
+end
+plot(hourly_energy)
+plot(sol, vars = energy_filter,title = "Energy per node ", label = ["Node 1" "Node 2" "Node 3" "Node 4"])
+xlabel!("Time in s")
+ylabel!("Energy in W")
+savefig("$dir/plots/Energy_with_callbacks_producer_consumer.png")
 
-plot(sol, vars = current_filter)
-plot(sol, vars = voltage_filter)
-plot(sol, vars = energy_filter)
-#plot(sol, vars = energy_abs_filter)
+#sum up the node powers
+energy_sum = sol[11,:]+sol[12,:]+sol[13,:]+sol[14,:]
+
+plot(energy_sum ,title = "Sum of Energy ",label = "Energy sum")
+xlabel!("Time in s")
+ylabel!("Energy in W")
+savefig("$dir/plots/Energy_sum_with_callbacks_producer_consumer.png")
+
 end
