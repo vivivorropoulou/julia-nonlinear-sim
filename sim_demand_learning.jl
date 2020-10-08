@@ -31,17 +31,17 @@ end
 
 begin
 ######### DC MODEL FILTER ################################
-	current_filter = 1:Int(1.5N)
-	voltage_filter = Int(1.5N)+1:Int(2.5N)
-	energy_filter = Int(2.5N)+1:Int(3.5N)#3N+1:4N
-	energy_abs_filter = Int(3.5N)+1:Int(4.5N) #4N+1:5N
+	#current_filter = 1:Int(1.5N)
+	#voltage_filter = Int(1.5N)+1:Int(2.5N)
+	#energy_filter = Int(2.5N)+1:Int(3.5N)#3N+1:4N
+	#energy_abs_filter = Int(3.5N)+1:Int(4.5N) #4N+1:5N
 ##########################################################
 ######### AC MODEL FILTER ################################
-	#phase_filter = 1:N
-	#freq_filter = N+1:2N
-	#control_filter = 2N+1:3N
-	#energy_filter = 3N+1:4N
-	#energy_abs_filter = 4N+1:5N
+	phase_filter = 1:N
+	freq_filter = N+1:2N
+	control_filter = 2N+1:3N
+	energy_filter = 3N+1:4N
+	energy_abs_filter = 4N+1:5N
 end
 
 
@@ -67,7 +67,7 @@ begin
 	l_day = 3600*24 # DemCurve.l_day
 	l_hour = 3600 # DemCurve.l_hour
 	l_minute = 60 # DemCurve.l_minute
-	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=52,T_inv=1/0.05,kI=10)
+	#low_layer_control = system_struc halo hallo ts.LeakyIntegratorPars(M_inv=0.2,kP=52,T_inv=1/0.05,kI=10)
 	#low_layer_control = system_structs.LeakyIntegratorPars(M_inv=0.2,kP=525,T_inv=1/0.05,kI=0.005)
 	# low_layer_control = system_structs.LeakyIntegratorPars(M_inv=repeat([0.2], inner=N),kP=repeat([525], inner=N),T_inv=repeat([1/0.05], inner=N),kI=repeat([0.005], inner=N)) # different for each node, change array
 	low_layer_control = system_structs.LeakyIntegratorPars(M_inv=[1/5.; 1/4.8; 1/4.1; 1/4.8],kP= [400.; 110.; 100.; 200.],T_inv=[1/0.04; 1/0.045; 1/0.047; 1/0.043],kI=[0.05; 0.004; 0.05; 0.001], L_inv= 1/0.237e-4 , C_inv = 1/0.01, K = 1., v_ref = 48., R = 0.0532)
@@ -108,6 +108,7 @@ struct demand_amp_var
 	demand
 end
 
+
 function (dav::demand_amp_var)(t)
 	index = Int(floor(t / (24*3600)))
 	dav.demand[index + 1,:]
@@ -145,6 +146,8 @@ demand_amp = t->vcat(demand_amp1(t), demand_amp2(t), demand_amp3(t), demand_amp4
 # demand_amp = t->vcat(demand_ampp(t), demand_ampn(t))
 
 periodic_demand =  t-> demand_amp(t) .* sin(t*pi/(24*3600))^2
+#hallo1 = map(periodic_demand, [1,2,3])
+
 samples = 24*4
 
 inter = interpolate([.2 * randn(N) for i in 1:(num_days * samples + 1)], BSpline(Linear()))

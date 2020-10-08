@@ -61,29 +61,43 @@ end
 
 function DCtoymodelstrenge!(du, u, p, t)
 	#DC Microgrids swarm type network producer and consumer, implemented by Lia Strenge in python, equations 4.12
-
+	################# producer and consumer definition ########################
 	n_prod = 2
 	n_cons = p.N - n_prod
-	P = -12.
 	n_lines = Int(1.5*p.N)
 
+	################## constant demand ########################################
+	P = -12.
+	#print(p.periodic_demand(t))
+	################## periodic demand ########################################
+	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t)
+
+	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
+	Pd = periodic_power + fluctuating_power
+
+	################## state variables ########################################
 	i = u[1:n_lines]
     v = u[(n_lines+1):Int(2.5*p.N)]
-	#print(v)
 
     di = @view du[1:n_lines]
     dv = @view du[(n_lines+1):Int(2.5*p.N)]
 
 
+
 	inc_v = p.incidence' * v
-    inc_i = p.incidence * i
+    inc_i = p.incidence * i # ausdrücken im integrator.u[1:n_lines]
+	#POWER ILC HINZUFÜGEN
+	#inc_i = p.incidence * i + i_ILC
+	#i_ILC = p.hl.current_background_power/v[1:n_prod] # current_background_power N/2
 
     @. di .= p.ll.L_inv.*(inc_v .-(p.ll.R.*i))
-    @. dv .= -1. .* inc_i
-    @. dv[1:n_prod] += p.ll.K .* (p.ll.v_ref.- v[1:n_prod])
-    @. dv[n_prod+1:end] += P ./ (v[n_prod+1:end].+1)
+    @. dv .= -1. .* inc_i #power ilc
+    @. dv[1:n_prod] += p.ll.K .* (p.ll.v_ref.- v[1:n_prod]) #integrator.u[voltage_filter] power ilc hinzufügen
+    @. dv[n_prod+1:end] += P./ (v[n_prod+1:end].+1)
     @. dv .*= p.ll.C_inv
-
+	#print(size(P ./ (v[n_prod+1:end].+1)))
+	#p.incidence *  integrator.u[1:Int(1.5*p.N)] *  integrator.u[voltage_filter]
+	#control_power_integrator als zusätzliche zustand
 end
 
 
@@ -125,8 +139,10 @@ function ACtoymodel!(du, u, p, t)
 
 	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
 	power_ILC = p.hl.current_background_power #(t)
+	print(power_ILC)
 	power_LI =  chi .- p.ll.kP .* omega
 	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t)
+	#print(periodic_power)
 	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
 	# avoid *, use mul! instead with pre-allocated cache http://docs.juliadiffeq.org/latest/basics/faq.html
 	#cache1 = zeros(size(p.coupling)[1])
@@ -168,7 +184,7 @@ function ACtoymodel_lin!(du, u, p, t)
 	control_power_integrator_abs = view(du,(4*p.N+1):(5*p.N))
 
 	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
-	power_ILC = p.hl.current_background_power
+	#power_ILC = p.hl.current_background_power
 	power_LI =  chi .- p.ll.kP .* omega
 	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t)
 	fluctuating_power = - p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
@@ -230,12 +246,19 @@ function (hu::HourlyUpdate)(integrator)
 	# println("Background power for the next hour:")
 	# println(integrator.p.hl.daily_background_power[hour, :])
 
-	integrator.p.hl.mismatch_yesterday[last_hour,:] .= integrator.u[power_idx]
+
+	# integrator.p.hl.mismatch_yesterday[last_hour,:] .= p.incidence *  integrator.u[1:Int(1.5*p.N)] *  integrator.u[voltage_filter]
+	#power index anpassen mit N
+	integrator.p.hl.mismatch_yesterday[last_hour,:] .= integrator.u[power_idx] #Strom spannung aktuell multiplizieren wegen DC da leistung kein zustand
 	integrator.u[power_idx] .= 0.
 	integrator.u[power_abs_idx] .= 0.
-
+	#producer index für die callbacks 1:n_prod , +1 n_cons
 	# println("hour $hour")
+
+	#current background power definieren
 	integrator.p.hl.current_background_power .= integrator.p.hl.daily_background_power[hour, :]
+	#integrator.p.hl.current_background_power[1:n_prod] .= integrator.p.hl.daily_background_power[hour, :]
+
 	# integrator.p.residual_demand = 0.1 * (0.5 + rand())
 	# reinit!(integrator, integrator.u, t0=integrator.t, erase_sol=true)
 
@@ -250,6 +273,7 @@ end
 function DailyUpdate_X(integrator)
 	#println("mismatch ", integrator.p.hl.daily_background_power)
 	#println("Q ", integrator.p.hl.Q)
+	#producer nur die hälte
 	integrator.p.hl.daily_background_power = integrator.p.hl.Q * (integrator.p.hl.daily_background_power + integrator.p.hl.kappa * integrator.p.hl.mismatch_yesterday)
 	#println("mismatch ", integrator.p.hl.daily_background_power)
 	nothing
