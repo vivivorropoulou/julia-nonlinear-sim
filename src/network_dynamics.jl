@@ -139,7 +139,7 @@ function ACtoymodel!(du, u, p, t)
 
 	# demand = - p.periodic_demand(t) .- p.residual_demand(t)
 	power_ILC = p.hl.current_background_power #(t)
-	print(power_ILC)
+	#print(power_ILC)
 	power_LI =  chi .- p.ll.kP .* omega
 	periodic_power = - p.periodic_demand(t) .+ p.periodic_infeed(t)
 	#print(periodic_power)
@@ -252,10 +252,11 @@ function (hu::HourlyUpdate)(integrator)
 	integrator.p.hl.mismatch_yesterday[last_hour,:] .= integrator.u[power_idx] #Strom spannung aktuell multiplizieren wegen DC da leistung kein zustand
 	integrator.u[power_idx] .= 0.
 	integrator.u[power_abs_idx] .= 0.
+
 	#producer index für die callbacks 1:n_prod , +1 n_cons
 	# println("hour $hour")
 
-	#current background power definieren
+	#current background power definieren ILC
 	integrator.p.hl.current_background_power .= integrator.p.hl.daily_background_power[hour, :]
 	#integrator.p.hl.current_background_power[1:n_prod] .= integrator.p.hl.daily_background_power[hour, :]
 

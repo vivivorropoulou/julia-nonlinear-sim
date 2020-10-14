@@ -168,7 +168,7 @@ function DCToymodel!(du, u, p, t)
    #network topology
    @. di .= p.ll.L_inv.*(p.inc.inc_v .-(p.ll.R.*i))
    @. dv .= -1. .* p.inc.inc_i
-   @. dv[1:p.ll.n_prod] += p.ll.K .* (p.ll.v_ref.- v[1:p.ll.n_prod]) .+ i_ILC#integrator.u[voltage_filter] power ilc hinzufügen
+   @. dv[1:p.ll.n_prod] += p.ll.K .* (p.ll.v_ref.- v[1:p.ll.n_prod]) #.+ i_ILC#integrator.u[voltage_filter] power ilc hinzufügen
    @. dv[p.ll.n_prod+1:end] += Pd ./ (v[p.ll.n_prod+1:end].+1)
 
    @. dv .*= p.ll.C_inv
@@ -211,20 +211,20 @@ function (hu::HourlyUpdate)(integrator)
 	#indexes
 	power_idx = Int(2.5*integrator.p.N)+1:Int(3.5*integrator.p.N) # power index
 	producer_idx = 1:integrator.p.ll.n_prod # producer index
-	consumer_idx = integrator.p.N .- producer_idx # consumer index
-	integrator_voltage = integrator.u[voltage_filter]
-	integrator_power = integrator.u[power_idx]
-	integrator_edge_current = integrator.u[current_filter]
+	#consumer_idx = integrator.p.N .- producer_idx # consumer index
+	#integrator_voltage = integrator.u[voltage_filter]
+	#integrator_power = integrator.u[power_idx]
+	#integrator_edge_current = integrator.u[current_filter]
 
 	#Define current background power in ac power ILC
-	integrator.p.hl.current_background_power[producer_idx] .= integrator.p.hl.daily_background_power[hour, :]
+
 
 
 	#edge currents per node summed up
-	integrator_inc_i = integrator.p.incidence *  integrator_edge_current
+	#integrator_inc_i = integrator.p.incidence *  integrator_edge_current
 
 	#power calculation y^c
-	integrator.u[power_idx].= integrator_inc_i .*  integrator_voltage
+	#integrator.u[power_idx].= integrator_inc_i .*  integrator_voltage
 	#integrator_power.= integrator_inc_i .*  integrator_voltage # Current is multiplied here with voltage #4
 	integrator.p.hl.mismatch_yesterday[last_hour,:] .= integrator.u[power_idx]
 
@@ -242,6 +242,7 @@ function (hu::HourlyUpdate)(integrator)
 
 
 	integrator.u[power_idx] .= 0.
+	integrator.p.hl.current_background_power[producer_idx] .= integrator.p.hl.daily_background_power[hour, :]
 
 	nothing
 end
@@ -294,6 +295,11 @@ end
 sol = solve(ode, Rodas4())
 
 ######################## PLOTTING ########################################
+p1 = plot()
+dd = t->((-periodic_demand(t) .- residual_demand(t)))
+plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,1]./3600) #, linestyle=:dash)
+plot!(0:num_days*l_day, t -> dd(t)[1])
+
 
 K_sol = sol.prob.p.ll.K
 v_ref_sol = sol.prob.p.ll.v_ref
@@ -370,7 +376,7 @@ p2 = plot()
 ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
 dd = t->((periodic_demand(t) .+ residual_demand(t)))
 plot!(0:num_days*l_day, t -> dd(t)[node], alpha=0.2, label = latexstring("P^d_{consumer_2}"),linewidth=3, linestyle=:dot)
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,3]./3600, label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
+plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,2]./3600, label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"), xticks = (0:3600*24:num_days*24*3600, string.(0:num_days)), ytickfontsize=14,
                xtickfontsize=14,
