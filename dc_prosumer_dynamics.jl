@@ -32,7 +32,7 @@ begin
 	l_hour = 3600 # DemCurve.l_hour
 	l_minute = 60
 
-	kappa = 1.0 / l_hour
+	kappa = 1/ l_hour
 	vc1 = 1:N # ilc_nodes (here: without communication)
 	cover1 = Dict([v => [] for v in vc1])# ilc_cover
 	u = [zeros(1000,1);1;zeros(1000,1)];
@@ -155,7 +155,6 @@ function prosumerToymodel!(du, u, p, t)
 
 	n_lines = Int(1.5*p.N)
 	#VORZEICHEN!!!
-	R1 =
     #state variables
     i = u[1:n_lines]
     v = u[(n_lines+1):Int(2.5*p.N)]
@@ -170,7 +169,7 @@ function prosumerToymodel!(du, u, p, t)
 
 	#The ILC current is at the dimensions [100,1000] A
 	#The flowing current is at the dimensions mA
-    i_ILC = p.hl.current_background_power./v
+    i_ILC = 0.0009 .* p.hl.current_background_power./v
 	#print("   ilc:   ",i_ILC)
 
 	p.inc.inc_v = p.incidence' * v
@@ -182,9 +181,9 @@ function prosumerToymodel!(du, u, p, t)
 	#power_ILC + power_LI + Pc/v + inc_i
 	@. di = p.ll.L_inv .*(-(p.ll.R.*i) .+ p.inc.inc_v)
 	#@. dv = p.ll.C_inv.*((power_ILC.+power_LI.-Pd)./v .+i_gen)
-	@. dv = p.ll.C_inv.*(0.0009.*i_ILC .+i_gen.- p.inc.inc_i .- i_load) #vorzeichen ILC incidence ilc gen gleiches vorzeichen
+	@. dv = p.ll.C_inv.*(i_ILC .+i_gen.- p.inc.inc_i .- i_load) #vorzeichen ILC incidence ilc gen gleiches vorzeichen
 
-	@. control_power_integrator=  p.inc.inc_i.* v 	#wenn negativ muss ilc kleiner werden 			#power LI
+	@. control_power_integrator=  i_gen.* v 	#wenn negativ muss ilc kleiner werden 			#power LI
 
 
 	return nothing
@@ -229,7 +228,7 @@ end
 
 function DailyUpdate_X(integrator)
 #ilc
-	integrator.p.hl.daily_background_power = integrator.p.hl.Q * (integrator.p.hl.daily_background_power + integrator.p.hl.kappa * integrator.p.hl.mismatch_yesterday) # mismatch is horuly energy
+	integrator.p.hl.daily_background_power = integrator.p.hl.Q * (integrator.p.hl.daily_background_power + integrator.p.hl.kappa * integrator.p.hl.mismatch_yesterday) #mismatch is horuly energy
 	nothing
 end
 
@@ -260,9 +259,9 @@ end
 ####################### solving ###############################
 begin
 	fp = [0. 0. 0. 0. 0. 0. 48. 48. 48. 48. 0. 0. 0. 0.] #initial condition
-	factor = 0.05
+	factor = 0.
 	ic = factor .* ones(14)
-	tspan = (0. , num_days * l_day) # 7 Tage
+	tspan = (0. , num_days * l_day) # 1 Tag
 	tspan2 = (0., 1.0)
 	#tspan3 = (0., 200.)
 	ode = ODEProblem(prosumerToymodel!, fp, tspan, param,
@@ -286,7 +285,7 @@ for i=1:24*num_days+1
 		hourly_energy[i,j] = sol((i-1)*3600)[energy_filter[j]]
 	end
 end
-plot(hourly_energy)
+plot(hourly_energy./3600)
 dd = t->((periodic_demand(t) .+residual_demand(t)))
 node = 2
 p1 = plot(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,1]./3600, label = "HE 1", legend=:bottomright) #, linestyle=:dash)
@@ -338,12 +337,13 @@ savefig("$dir/plots/prosumer_sum_hourly_energy_demand_without_ILC.png")
 	end
 	return sum_LI, sum_ILC
 end
-
+#jede stunde aufrufen
 sum_l, sum_i = control_integral(sol,2,N,num_days,ILC_power)
 
 ###################### Hourly energy #####################################
 plot(sum_l)
 plot(sol, vars=energy_filter)
+plot(sol, vars=voltage_filter)
 plot(hourly_energy)
 plot!(hourly_energy[:,1] + hourly_energy[:,2] + hourly_energy[:,3] + hourly_energy[:,4])
 plot!(hourly_energy, title = "Lower-layer energy per node ", label = ["Node 1" "Node 2" "Node 3" "Node 4"]) #Sum of node powers should be zero
@@ -357,7 +357,7 @@ savefig("$dir/plots/DC_prosumer_lower_layer_energy.png")
 
 ILC_power = zeros(num_days+2,24,N)
 for j = 1:N
-	ILC_power[2,:,j] = Q*(zeros(24,1) +  kappa*hourly_energy[1:24,j])
+	ILC_power[2,:,j] = (zeros(24,1) +  (-1/3600^2)*hourly_energy[1:24,j])
 end
 norm_energy_d = zeros(num_days,N)
 for j = 1:N
@@ -366,10 +366,11 @@ end
 
 for i=2:num_days
 	for j = 1:N
-		ILC_power[i+1,:,j] = Q*(ILC_power[i,:,j] +  kappa*hourly_energy[(i-1)*24+1:i*24,j])
+		ILC_power[i+1,:,j] = (ILC_power[i,:,j] +  (-1/3600^2)*hourly_energy[(i-1)*24+1:i*24,j])
 		norm_energy_d[i,j] = norm(hourly_energy[(i-1)*24+1:i*24,j])
 	end
 end
+plot(vcat(ILC_power[:,:,1]'...)./0.0009)
 
 #ILC_power_agg = maximum(mean(ILC_power.^2,dims=3),dims=2)
 ILC_power_agg = [norm(mean(ILC_power,dims=3)[d,:]) for d in 1:num_days+2]
@@ -386,7 +387,7 @@ norm_hourly_energy = [norm(hourly_energy[h,:]) for h in 1:24*num_days]
 
 node = 1
 p1 = plot()
-ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
+ILC_power_hourly_mean_node = vcat(ILC_power[:,:,1]'...)
 plot!(0:num_days*l_day, t -> dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
 plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node]./3600, label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
@@ -394,7 +395,7 @@ savefig("$dir/plots/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
 #plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"), xticks = (0:3600*24:num_days*24*3600, string.(0:num_days)), ytickfontsize=14,
 #               xtickfontsize=14,
 #    		   legendfontsize=10, linewidth=3, yaxis=("normed power",font(14)),legend=false, lc =:black, margin=5Plots.mm)
-
+plot(vcat(ILC_power[:,:,1]'...))
 
 
 
