@@ -154,7 +154,8 @@ end
 function prosumerToymodel!(du, u, p, t)
 
 	n_lines = Int(1.5*p.N)
-#VORZEICHEN!!!!
+	#VORZEICHEN!!!
+	R1 =
     #state variables
     i = u[1:n_lines]
     v = u[(n_lines+1):Int(2.5*p.N)]
@@ -167,8 +168,10 @@ function prosumerToymodel!(du, u, p, t)
 	fluctuating_power =   p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
 	Pd = periodic_power + fluctuating_power
 
+	#The ILC current is at the dimensions [100,1000] A
+	#The flowing current is at the dimensions mA
     i_ILC = p.hl.current_background_power./v
-	#print(i_ILC)
+	#print("   ilc:   ",i_ILC)
 
 	p.inc.inc_v = p.incidence' * v
     p.inc.inc_i = p.incidence * i #vorzeichen überprüfen
@@ -179,9 +182,9 @@ function prosumerToymodel!(du, u, p, t)
 	#power_ILC + power_LI + Pc/v + inc_i
 	@. di = p.ll.L_inv .*(-(p.ll.R.*i) .+ p.inc.inc_v)
 	#@. dv = p.ll.C_inv.*((power_ILC.+power_LI.-Pd)./v .+i_gen)
-	@. dv = p.ll.C_inv.*(i_gen .- p.inc.inc_i .- i_load) #vorzeichen ILC incidence ilc gen gleiches vorzeichen
+	@. dv = p.ll.C_inv.*(0.0009.*i_ILC .+i_gen.- p.inc.inc_i .- i_load) #vorzeichen ILC incidence ilc gen gleiches vorzeichen
 
-	@. control_power_integrator=p.inc.inc_i.* v 	#wenn negativ muss ilc kleiner werden 			#power LI
+	@. control_power_integrator=  p.inc.inc_i.* v 	#wenn negativ muss ilc kleiner werden 			#power LI
 
 
 	return nothing
@@ -209,6 +212,7 @@ function (hu::HourlyUpdate)(integrator)
 
 	#Define current background power in ac power ILC
 
+	#print(integrator.u[power_idx])
 
 	#power calculation y^c
 	#integrator.u[power_idx].= integrator.p.incidence *  integrator.u[current_filter].*  integrator.u[voltage_filter]# Node current is multiplied here with voltage
@@ -266,6 +270,14 @@ begin
 						 PeriodicCallback(DailyUpdate_X, l_day)))
 end
 sol = solve(ode, Rodas4())
+p_r1 = plot(sol, vars=energy_filter, title= "i_ILC * 0.0004")
+p_r2 = plot(sol, vars=energy_filter, title= "i_ILC * 0.0009")
+plot(p_r1, p_r2)
+savefig("$dir/plots/prosumer_different_pars_for_ILC.png")
+incidence = sol.prob.p.incidence
+
+voltage = [sol[voltage_filter[1],:], sol[voltage_filter[2],:], sol[voltage_filter[3],:], sol[voltage_filter[4],:]]
+current = [sol[current_filter[1],:], sol[current_filter[2],:], sol[current_filter[3],:], sol[current_filter[4],:], sol[current_filter[5],:], sol[current_filter[6],:]]
 
 ######################## PLOTTING ########################################
 hourly_energy = zeros(24*num_days+1,N)
