@@ -32,15 +32,6 @@ begin
 	l_hour = 3600 # DemCurve.l_hour
 	l_minute = 60
 
-	kappa = 1/ l_hour
-	vc1 = 1:N # ilc_nodes (here: without communication)
-	cover1 = Dict([v => [] for v in vc1])# ilc_cover
-	u = [zeros(1000,1);1;zeros(1000,1)];
-	fc = 1/6;
-	a = digitalfilter(Lowpass(fc),Butterworth(2));
-	Q1 = filtfilt(a,u);# Markov Parameter
-	Q = Toeplitz(Q1[1001:1001+24-1],Q1[1001:1001+24-1]);
-
 end
 
 
@@ -122,14 +113,10 @@ end
 	end
 end
 
-function set_parameters(N)
+function set_parameters(N, kappa, Q)
 	low_layer_control = LeakyIntegratorPars(K = 1. , R = 0.0532, L_inv = 1/0.237e-4, C_inv = 1/0.01,  v_ref = 48. ,  n_prod = num_prod, n_cons = N.-num_prod)
-	u = [zeros(1000,1);1;zeros(1000,1)];
-	fc = 1/6;
-	a = digitalfilter(Lowpass(fc), Butterworth(2));
-	Q1 = filtfilt(a,u);
 	control_incidences = incidences(inc_i = zeros(N), inc_v = zeros(Int(1.5*N)))
-	higher_layer_control = ILCPars(kappa = 0.35, mismatch_yesterday=zeros(24,N), daily_background_power=zeros(24,N), current_background_power=zeros(N), ilc_nodes=1:N, ilc_covers = [], Q = Toeplitz(Q1[1001:1001+24-1],Q1[1001:1001+24-1]))
+	higher_layer_control = ILCPars(kappa = kappa, mismatch_yesterday=zeros(24,N), daily_background_power=zeros(24,N), current_background_power=zeros(N), ilc_nodes=1:N, ilc_covers = [], Q = Q)
 	periodic_infeed = t -> zeros(N)
 	peak_demand = rand(N)
 	periodic_demand = t -> zeros(N)
@@ -154,7 +141,7 @@ end
 function prosumerToymodel!(du, u, p, t)
 
 	n_lines = Int(1.5*p.N)
-	#VORZEICHEN!!!
+
     #state variables
     i = u[1:n_lines]
     v = u[(n_lines+1):Int(2.5*p.N)]
@@ -167,23 +154,18 @@ function prosumerToymodel!(du, u, p, t)
 	fluctuating_power =   p.residual_demand(t) .+ p.fluctuating_infeed(t) # here we can add fluctuating infeed as well
 	Pd = periodic_power + fluctuating_power
 
-	#The ILC current is at the dimensions [100,1000] A
-	#The flowing current is at the dimensions mA
-    i_ILC = 0.0009 .* p.hl.current_background_power./v
-	#print("   ilc:   ",i_ILC)
+    i_ILC =  p.hl.current_background_power./v
 
 	p.inc.inc_v = p.incidence' * v
-    p.inc.inc_i = p.incidence * i #vorzeichen überprüfen
-	#print(p.inc.inc_i)
-	i_gen = p.ll.K .* (p.ll.v_ref .- v) #.+i_ILC
-	i_load = Pd./(v.+1)
-	#power_LI = -p.inc.inc_i.* v
-	#power_ILC + power_LI + Pc/v + inc_i
-	@. di = p.ll.L_inv .*(-(p.ll.R.*i) .+ p.inc.inc_v)
-	#@. dv = p.ll.C_inv.*((power_ILC.+power_LI.-Pd)./v .+i_gen)
-	@. dv = p.ll.C_inv.*(i_ILC .+i_gen.- p.inc.inc_i .- i_load) #vorzeichen ILC incidence ilc gen gleiches vorzeichen
+    p.inc.inc_i = p.incidence * i
 
-	@. control_power_integrator=  i_gen.* v 	#wenn negativ muss ilc kleiner werden 			#power LI
+	i_gen = p.ll.K .* (p.ll.v_ref .- v)
+	i_load = Pd./(v.+1)
+
+	@. di = p.ll.L_inv .*(-(p.ll.R.*i) .+ p.inc.inc_v)
+	@. dv = p.ll.C_inv.*(i_ILC .+i_gen.- p.inc.inc_i .- i_load)
+
+	@. control_power_integrator =  i_gen .* v 	#Power LI
 
 
 	return nothing
@@ -209,16 +191,10 @@ function (hu::HourlyUpdate)(integrator)
 	last_hour = mod(hour-2, 24) + 1
 	power_idx = Int(2.5*integrator.p.N)+1:Int(3.5*integrator.p.N) # power index
 
-	#Define current background power in ac power ILC
-
-	#print(integrator.u[power_idx])
-
 	#power calculation y^c
-	#integrator.u[power_idx].= integrator.p.incidence *  integrator.u[current_filter].*  integrator.u[voltage_filter]# Node current is multiplied here with voltage
-	integrator.p.hl.mismatch_yesterday[last_hour,:] .= integrator.u[power_idx]
-	#integrator.u[power_idx].= integrator.p.incidence *  integrator.u[current_filter].*  integrator.u[voltage_filter]# Node current is multiplied here with voltage
+	integrator.p.hl.mismatch_yesterday[last_hour,:] .= 1/3600 .* integrator.u[power_idx]
 	integrator.u[power_idx] .= 0.
-	#print(integrator.u[power_idx])
+
 	integrator.p.hl.current_background_power .= integrator.p.hl.daily_background_power[hour, :]
 
 	nothing
@@ -228,7 +204,7 @@ end
 
 function DailyUpdate_X(integrator)
 #ilc
-	integrator.p.hl.daily_background_power = integrator.p.hl.Q * (integrator.p.hl.daily_background_power + integrator.p.hl.kappa * integrator.p.hl.mismatch_yesterday) #mismatch is horuly energy
+	integrator.p.hl.daily_background_power =  integrator.p.hl.Q * (integrator.p.hl.daily_background_power + integrator.p.hl.kappa .* integrator.p.hl.mismatch_yesterday) #mismatch is horuly energy
 	nothing
 end
 
@@ -245,11 +221,20 @@ samples = 24*4
 inter = interpolate([.2 * randn(N) for i in 1:(num_days * samples + 1)], BSpline(Linear()))
 residual_demand = t -> inter(1. + t / (24*3600) * samples)
 
+##################  set higher_layer_control ##################
 
+kappa = 1.
+vc1 = 1:N # ilc_nodes (here: without communication)
+cover1 = Dict([v => [] for v in vc1])# ilc_cover
+u = [zeros(1000,1);1;zeros(1000,1)];
+fc = 1/6;
+a = digitalfilter(Lowpass(fc),Butterworth(2));
+Q1 = filtfilt(a,u);# Markov Parameter
+Q = Toeplitz(Q1[1001:1001+24-1],Q1[1001:1001+24-1]);
 
 ################### set parameters ############################
 begin
-	param = set_parameters(N)
+	param = set_parameters(N, kappa, Q)
 	param.periodic_demand = periodic_demand
 	param.residual_demand = residual_demand
 	param.hl.daily_background_power .= 0
@@ -269,95 +254,19 @@ begin
 						 PeriodicCallback(DailyUpdate_X, l_day)))
 end
 sol = solve(ode, Rodas4())
-p_r1 = plot(sol, vars=energy_filter, title= "i_ILC * 0.0004")
-p_r2 = plot(sol, vars=energy_filter, title= "i_ILC * 0.0009")
-plot(p_r1, p_r2)
-savefig("$dir/plots/prosumer_different_pars_for_ILC.png")
-incidence = sol.prob.p.incidence
-
-voltage = [sol[voltage_filter[1],:], sol[voltage_filter[2],:], sol[voltage_filter[3],:], sol[voltage_filter[4],:]]
-current = [sol[current_filter[1],:], sol[current_filter[2],:], sol[current_filter[3],:], sol[current_filter[4],:], sol[current_filter[5],:], sol[current_filter[6],:]]
 
 ######################## PLOTTING ########################################
 hourly_energy = zeros(24*num_days+1,N)
+
 for i=1:24*num_days+1
 	for j = 1:N
-		hourly_energy[i,j] = sol((i-1)*3600)[energy_filter[j]]
+		hourly_energy[i,j] = sol((i-1)*3600)[energy_filter[j]]./3600 # weil das integral  auch durch 3600 geteilt wird
 	end
 end
-plot(hourly_energy./3600)
-dd = t->((periodic_demand(t) .+residual_demand(t)))
-node = 2
-p1 = plot(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,1]./3600, label = "HE 1", legend=:bottomright) #, linestyle=:dash)
-plot!(0:num_days*l_day, t -> dd(t)[1], label = "D 1", legend=:bottomright)
-
-p2 = plot(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,2]./3600, label = "HE 2", legend=:bottomright) #, linestyle=:dash)
-plot!(0:num_days*l_day, t -> dd(t)[2], label = "D 2", legend=:bottomright)
-
-p3 = plot(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,3]./3600, label = "HE 3", legend=:bottomright) #, linestyle=:dash)
-plot!(0:num_days*l_day, t -> dd(t)[3], label = "D 3", legend=:bottomright)
-
-p4 = plot(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,4]./3600, label = "HE 4") #, linestyle=:dash)
-plot!(0:num_days*l_day, t -> dd(t)[4], label = "D 4", legend=:bottomright)
-
-plot()
-plot_energy_demand = p1 = plot(p1,p2,p3,p4,layout = 4)
-
-plot(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,1] + hourly_energy[1:num_days*24,2] + hourly_energy[1:num_days*24,3] + hourly_energy[1:num_days*24,4], label = "sum of hourly energy per node")
-
-plot!(0:num_days*l_day, t -> dd(t)[1]+dd(t)[2] +dd(t)[3]+dd(t)[4], label="sum of demand per node")
-savefig("$dir/plots/prosumer_sum_hourly_energy_demand_without_ILC.png")
-
-@inline function control_integral(sol, nd, N, num_days, ILC_power)
-	sum_LI = zeros( N )
-	sum_ILC = zeros( N )
-
-	#indices_ω = idx_containing(nd, :ω)
-	#indices_χ = idx_containing(nd, :χ)
-	#KP = [nd.f.vertices![idx].f!.LI.kp for idx in 1:N]
-
-	for j in 1:N
-		for (i,t) in enumerate(sol.t)
-			if i == 1
-				delta_t = (sol.t[i+1] - sol.t[i])
-			elseif i == length(sol.t)
-				delta_t = (sol.t[i] - sol.t[i-1])
-			else
-				delta_t = (sol.t[i+1] - sol.t[i-1])/2
-			end
-			inc_i = sol.prob.p.incidence * sol(t)[current_filter]
-			sum_LI[j] += (inc_i[j] .* sol(t)[voltage_filter[j]])* delta_t#abs(- KP[j]   sol(t)[indices_ω[j]] + sol(t)[indices_χ[j]])   delta_t
-		end
-	end
-	for j in 1:N
-		ILC = vcat(ILC_power[:,:,j]'...)
-		for i in 1:24*num_days
-			sum_ILC[j] += abs(ILC[i]) * 3600
-		end
-	end
-	return sum_LI, sum_ILC
-end
-#jede stunde aufrufen
-sum_l, sum_i = control_integral(sol,2,N,num_days,ILC_power)
-
-###################### Hourly energy #####################################
-plot(sum_l)
-plot(sol, vars=energy_filter)
-plot(sol, vars=voltage_filter)
-plot(hourly_energy)
-plot!(hourly_energy[:,1] + hourly_energy[:,2] + hourly_energy[:,3] + hourly_energy[:,4])
-plot!(hourly_energy, title = "Lower-layer energy per node ", label = ["Node 1" "Node 2" "Node 3" "Node 4"]) #Sum of node powers should be zero
-xlabel!("Time in h")
-ylabel!("Energy in W")
-savefig("$dir/plots/DC_prosumer_lower_layer_energy.png")
-###########################################################################
-######################ILC power ##########################################
-
-#demand
-
+#plot(hourly_energy)
 ILC_power = zeros(num_days+2,24,N)
 for j = 1:N
-	ILC_power[2,:,j] = (zeros(24,1) +  (-1/3600^2)*hourly_energy[1:24,j])
+	ILC_power[2,:,j] = Q*(zeros(24,1) +  kappa*hourly_energy[1:24,j])
 end
 norm_energy_d = zeros(num_days,N)
 for j = 1:N
@@ -366,11 +275,11 @@ end
 
 for i=2:num_days
 	for j = 1:N
-		ILC_power[i+1,:,j] = (ILC_power[i,:,j] +  (-1/3600^2)*hourly_energy[(i-1)*24+1:i*24,j])
+		ILC_power[i+1,:,j] = Q*(ILC_power[i,:,j] +  kappa*hourly_energy[(i-1)*24+1:i*24,j])
 		norm_energy_d[i,j] = norm(hourly_energy[(i-1)*24+1:i*24,j])
 	end
 end
-plot(vcat(ILC_power[:,:,1]'...)./0.0009)
+
 
 #ILC_power_agg = maximum(mean(ILC_power.^2,dims=3),dims=2)
 ILC_power_agg = [norm(mean(ILC_power,dims=3)[d,:]) for d in 1:num_days+2]
@@ -378,6 +287,7 @@ ILC_power_hourly_mean = vcat(mean(ILC_power,dims=3)[:,:,1]'...)
 ILC_power_hourly_mean_node1 = vcat(ILC_power[:,:,1]'...)
 ILC_power_hourly = [norm(reshape(ILC_power,(num_days+2)*24,N)[h,:]) for h in 1:24*(num_days+2)]
 ILC_power_hourly_node1 = [norm(reshape(ILC_power,(num_days+2)*24,N)[h,1]) for h in 1:24*(num_days+2)]
+dd = t->((-periodic_demand(t) .- residual_demand(t)))
 load_amp = [first(maximum(dd(t))) for t in 1:3600*24:3600*24*num_days]
 
 norm_hourly_energy = [norm(hourly_energy[h,:]) for h in 1:24*num_days]
@@ -388,108 +298,51 @@ norm_hourly_energy = [norm(hourly_energy[h,:]) for h in 1:24*num_days]
 node = 1
 p1 = plot()
 ILC_power_hourly_mean_node = vcat(ILC_power[:,:,1]'...)
-plot!(0:num_days*l_day, t -> dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node]./3600, label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
+plot!(0:num_days*l_day, t -> -dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
+plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node], label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
-savefig("$dir/plots/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
-#plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"), xticks = (0:3600*24:num_days*24*3600, string.(0:num_days)), ytickfontsize=14,
-#               xtickfontsize=14,
-#    		   legendfontsize=10, linewidth=3, yaxis=("normed power",font(14)),legend=false, lc =:black, margin=5Plots.mm)
-plot(vcat(ILC_power[:,:,1]'...))
+savefig("$dir/plots/kappa_1_DC_prosumer_demand_seconds_node_$(node)_hetero.png")
+
 
 
 
 node = 2
 p2 = plot()
 ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
-plot!(0:num_days*l_day, t -> dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node]./3600, label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
+plot!(0:num_days*l_day, t -> -dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
+plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node], label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
-savefig("$dir/plots/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
+savefig("$dir/plots/kappa_1_DC_prosumer_demand_seconds_node_$(node)_hetero.png")
 
 
 node = 3
 p3 = plot()
 ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
-plot!(0:num_days*l_day, t -> dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node]./3600, label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
+plot!(0:num_days*l_day, t -> -dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
+plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node], label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
-savefig("$dir/plots/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
+savefig("$dir/plots/kappa_1_DC_prosumer_demand_seconds_node_$(node)_hetero.png")
 
 
 node = 4
 p4 = plot()
 ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
-plot!(0:num_days*l_day, t -> dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node]./3600, label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
+plot!(0:num_days*l_day, t -> -dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
+plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node], label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
-savefig("$dir/plots/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
+savefig("$dir/plots/kappa_1_DC_prosumer_demand_seconds_node_$(node)_hetero.png")
 
-
-
-plot(1:num_days, ILC_power_agg[1:num_days,1,1] ./ maximum(ILC_power_agg), label=L"$\max_h \Vert P_{ILC, k}\Vert$")
-plot!(1:num_days, mean(norm_energy_d,dims=2) ./ maximum(norm_energy_d), label=L"norm(y_h)")
-plot!(1:num_days, load_amp  ./ maximum(load_amp), label = "demand amplitude")
-xlabel!("day d [d]")
-ylabel!("normed quantities [a.u.]")
-savefig("$dir/plots/DC_prosumer_demand_daily_hetero.png")
-###########################################################################
-
-
-energy_cons = plot(sol, vars = energy_filter,title = "Energy per node ", label = ["Node 3" "Node 4"])
-xlabel!("Time in s")
-ylabel!("Energy in W")
-savefig("$dir/plots/Energy_with_callbacks_producer_consumer.png")
-energy_prod= plot(sol, vars = energy_filter[1:2],title = "Producer Energy per node ", label = ["Node 1" "Node 2"])
-#sum up the node powers
-energy_sum = sol[energy_filter[1],:]+sol[energy_filter[2],:]+sol[energy_filter[3],:]+sol[energy_filter[4],:]
-
-plot(energy_sum ,title = "Sum of Energy ",label = "Energy sum")
-xlabel!("Time in s")
-ylabel!("Energy in W")
-savefig("$dir/plots/Energy_sum_with_callbacks_producer_consumer.png")
-############################################################################
-plot(sol, vars = voltage_filter,title = "Voltage per node ", label = ["Node 1" "Node 2" "Node 3" "Node 4"])
-xlabel!("Time in s")
-ylabel!("Voltage in V")
-savefig("$dir/plots/DC_prosumer_periodic_voltage_julia.png")
-
-
+# SUM
 psum = plot()
-ILC_power_hourly_mean_sum1 = vcat(ILC_power[:,:,1]'...) .+ vcat(ILC_power[:,:,3]'...)
-ILC_power_hourly_mean_sum2 = vcat(ILC_power[:,:,2]'...) .+ vcat(ILC_power[:,:,4]'...)
-plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_sum1[1:num_days*24], label=latexstring("\$u_j^{ILC}\$"), xticks = (0:3600*24:num_days*24*3600, string.(0:num_days)), ytickfontsize=14,
-               xtickfontsize=18,legend=false,
-    		   legendfontsize=10, linewidth=3,xaxis=("days [c]",font(14)),  yaxis=("normed power",font(14)),lc =:black, margin=5Plots.mm)
-plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_sum2[1:num_days*24], label=latexstring("\$u_j^{ILC}\$"), xticks = (0:3600*24:num_days*24*3600, string.(0:num_days)), ytickfontsize=14,
-			                  xtickfontsize=18,legend=false,
-			       		   legendfontsize=10, linewidth=3,xaxis=("days [c]",font(14)),  yaxis=("normed power",font(14)),lc =:black, margin=5Plots.mm)
-			   #ylims!(-0.7,1.5)
-#ylims!(-0.7,1.5)
-plot!(0:num_days*l_day, t -> (dd(t)[1] .+ dd(t)[3]), alpha=0.2, label = latexstring("\$P^d_j\$"),linewidth=3, linestyle=:dot)
-plot!(1:3600:24*num_days*3600,(hourly_energy[1:num_days*24,1] + hourly_energy[1:num_days*24,3] ./3600), label=latexstring("y_j^{c,h}"),linewidth=3, linestyle=:dash)
-plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_sum[1:num_days*24], label=latexstring("\$u_j^{ILC}\$"), xticks = (0:3600*24:num_days*24*3600, string.(0:num_days)), ytickfontsize=14,
-               xtickfontsize=18,legend=false,
-    		   legendfontsize=10, linewidth=3,xaxis=("days [c]",font(14)),  yaxis=("normed power",font(14)),lc =:black, margin=5Plots.mm)
+ILC_power_hourly_mean_sum = (vcat(ILC_power[:,:,1]'...) .+ vcat(ILC_power[:,:,2]'...) .+ vcat(ILC_power[:,:,3]'...) .+ vcat(ILC_power[:,:,4]'...))
+plot!(0:num_days*l_day, t -> -(dd(t)[1] .+ dd(t)[2] .+ dd(t)[3] .+ dd(t)[4]), alpha=0.4, label = latexstring("\$P^d_j\$"),linewidth=3, linestyle=:dot)
+plot!(1:3600:24*num_days*3600,(hourly_energy[1:num_days*24,1] + hourly_energy[1:num_days*24,2] + hourly_energy[1:num_days*24,3] + hourly_energy[1:num_days*24,4]), label=latexstring("y_j^{c,h}"),linewidth=3, linestyle=:dash)
+plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_sum[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
+               #xtickfontsize=18,legend=false,
+    		   #legendfontsize=10, linewidth=3,xaxis=("days [c]",font(14)),  yaxis=("normed power",font(14)),lc =:black, margin=5Plots.mm)
+savefig("$dir/plots/kappa_1_DC_prosumer_demand_seconds_sum_hetero.png")
+p_dif_nodes = plot(p1,p2,p3,p4)
+p_all_together = plot(psum,p_dif_nodes, layout=(2,1))
 #ylims!(-0.7,1.5)
 #title!("Initial convergence")
-savefig(psum,"$dir/plots/ILC_Node_1+3_and_1+2.png")
-
-psum = plot()
-ILC_power_hourly_mean_sum = vcat(ILC_power[:,:,1]'...) .+ vcat(ILC_power[:,:,2]'...) .+ vcat(ILC_power[:,:,3]'...) .+ vcat(ILC_power[:,:,4]'...)
-plot!(0:num_days*l_day, t -> (dd(t)[1] .+ dd(t)[2] .+ dd(t)[3] .+ dd(t)[4]), alpha=0.2, label = latexstring("\$P^d_j\$"),linewidth=3, linestyle=:dot)
-plot!(1:3600:24*num_days*3600,(hourly_energy[1:num_days*24,1] + hourly_energy[1:num_days*24,2] + hourly_energy[1:num_days*24,3] + hourly_energy[1:num_days*24,4])./3600, label=latexstring("y_j^{c,h}"),linewidth=3, linestyle=:dash)
-plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_sum[1:num_days*24], label=latexstring("\$u_j^{ILC}\$"), xticks = (0:3600*24:num_days*24*3600, string.(0:num_days)), ytickfontsize=14,
-               xtickfontsize=18,legend=false,
-    		   legendfontsize=10, linewidth=3,xaxis=("days [c]",font(14)),  yaxis=("normed power",font(14)),lc =:black, margin=5Plots.mm)
-#ylims!(-0.7,1.5)
-#title!("Initial convergence")
-savefig(psum,"$dir/plots/Plot_demand_hourly_energy_sum.png")
-############ DC CURRENT plot #########################################
-
-cur = plot(sol, vars = current_filter, title = "Current per edge ", label = ["Edge 1" "Edge 2" "Edge 3" "Edge 4" "Edge 5" "Edge 6"])
-xlabel!("Time in s")
-ylabel!("Current in A")
-savefig("$dir/plots/DC_prosumer_periodic_current_julia.png")
-plot!(cur,energy)
-end
+savefig(p_all_together ,"$dir/plots/Plot_demand_hourly_energy_sum_and_seperate.png")
