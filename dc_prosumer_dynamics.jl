@@ -163,7 +163,7 @@ function prosumerToymodel!(du, u, p, t)
 	i_load = Pd./(v.+1)
 
 	@. di = p.ll.L_inv .*(-(p.ll.R.*i) .+ p.inc.inc_v)
-	@. dv = p.ll.C_inv.*(i_ILC .+i_gen.- p.inc.inc_i .- i_load)
+	@. dv = p.ll.C_inv.*(i_ILC.+i_gen.- p.inc.inc_i .- i_load)
 
 	@. control_power_integrator =  i_gen .* v 	#Power LI
 
@@ -255,7 +255,8 @@ begin
 end
 sol = solve(ode, Rodas4())
 
-######################## PLOTTING ########################################
+#################################################################################
+######################## ENERGY PLOTTING ########################################
 hourly_energy = zeros(24*num_days+1,N)
 
 for i=1:24*num_days+1
@@ -263,7 +264,6 @@ for i=1:24*num_days+1
 		hourly_energy[i,j] = sol((i-1)*3600)[energy_filter[j]]./3600 # weil das integral  auch durch 3600 geteilt wird
 	end
 end
-#plot(hourly_energy)
 ILC_power = zeros(num_days+2,24,N)
 for j = 1:N
 	ILC_power[2,:,j] = Q*(zeros(24,1) +  kappa*hourly_energy[1:24,j])
@@ -280,8 +280,6 @@ for i=2:num_days
 	end
 end
 
-
-#ILC_power_agg = maximum(mean(ILC_power.^2,dims=3),dims=2)
 ILC_power_agg = [norm(mean(ILC_power,dims=3)[d,:]) for d in 1:num_days+2]
 ILC_power_hourly_mean = vcat(mean(ILC_power,dims=3)[:,:,1]'...)
 ILC_power_hourly_mean_node1 = vcat(ILC_power[:,:,1]'...)
@@ -292,7 +290,7 @@ load_amp = [first(maximum(dd(t))) for t in 1:3600*24:3600*24*num_days]
 
 norm_hourly_energy = [norm(hourly_energy[h,:]) for h in 1:24*num_days]
 
-###########################################################################
+#################################################################################
 
 
 node = 1
@@ -341,8 +339,21 @@ plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_sum[1:num_days*24], label=
                #xtickfontsize=18,legend=false,
     		   #legendfontsize=10, linewidth=3,xaxis=("days [c]",font(14)),  yaxis=("normed power",font(14)),lc =:black, margin=5Plots.mm)
 savefig("$dir/plots/kappa_1_DC_prosumer_demand_seconds_sum_hetero.png")
-p_dif_nodes = plot(p1,p2,p3,p4)
+p_dif_nodes = plot(p1,p2,p3,p4, legend=:bottomright)
 p_all_together = plot(psum,p_dif_nodes, layout=(2,1))
 #ylims!(-0.7,1.5)
 #title!("Initial convergence")
 savefig(p_all_together ,"$dir/plots/Plot_demand_hourly_energy_sum_and_seperate.png")
+
+#################################################################################
+##################### CURRENT AND VOLTAGE PLOTTING ##############################
+
+cur = plot(sol, vars = current_filter, title = "Current per edge ", label = ["Edge 1" "Edge 2" "Edge 3" "Edge 4" "Edge 5" "Edge 6"])
+xlabel!("Time in s")
+ylabel!("Current in A")
+savefig("$dir/plots/DC_prosumer_constant_load_no_ILC_current_per_edge.png")
+
+volt = plot(sol, vars = voltage_filter,title = "Voltage per node ", label = ["Node 1" "Node 2" "Node 3" "Node 4"])
+xlabel!("Time in s")
+ylabel!("Voltage in V")
+savefig("$dir/plots/DC_prosumer_constant_load_no_ILC_voltage_per_node.png")
