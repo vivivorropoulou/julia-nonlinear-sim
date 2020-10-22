@@ -218,7 +218,7 @@ residual_demand = t -> inter(1. + t / (24*3600) * samples)
 
 ##################  set higher_layer_control ##################
 
-kappa = 0.25
+kappa = 1.
 vc1 = 1:N # ilc_nodes (here: without communication)
 cover1 = Dict([v => [] for v in vc1])# ilc_cover
 u = [zeros(1000,1);1;zeros(1000,1)];
@@ -260,7 +260,6 @@ for i=1:24*num_days+1
 		hourly_energy[i,j] = sol((i-1)*3600)[energy_filter[j]]./3600 # weil das integral  auch durch 3600 geteilt wird
 	end
 end
-
 ILC_power = zeros(num_days+2,24,N)
 for j = 1:N
 	ILC_power[2,:,j] = Q*(zeros(24,1) +  kappa*hourly_energy[1:24,j])
@@ -296,7 +295,7 @@ ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
 plot!(0:num_days*l_day, t -> -dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
 plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node], label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
-savefig("$dir/plots/kappa_0.25/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
+savefig("$dir/plots/kappa_1/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
 
 
 
@@ -307,7 +306,7 @@ ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
 plot!(0:num_days*l_day, t -> -dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
 plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node], label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
-savefig("$dir/plots/kappa_0.25/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
+savefig("$dir/plots/kappa_1/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
 
 
 node = 3
@@ -316,7 +315,7 @@ ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
 plot!(0:num_days*l_day, t -> -dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
 plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node], label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
-savefig("$dir/plots/kappa_0.25/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
+savefig("$dir/plots/kappa_1/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
 
 
 node = 4
@@ -325,7 +324,7 @@ ILC_power_hourly_mean_node = vcat(ILC_power[:,:,node]'...)
 plot!(0:num_days*l_day, t -> -dd(t)[node], alpha=0.2, label = latexstring("P^d_$node"),linewidth=3, linestyle=:dot)
 plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,node], label=latexstring("y_$node^{c,h}"),linewidth=3) #, linestyle=:dash)
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_node[1:num_days*24], label=latexstring("\$u_$node^{ILC}\$"))
-savefig("$dir/plots/kappa_0.25/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
+savefig("$dir/plots/kappa_1/DC_prosumer_demand_seconds_node_$(node)_hetero.png")
 
 # SUM
 psum = plot()
@@ -335,16 +334,16 @@ plot!(1:3600:24*num_days*3600,(hourly_energy[1:num_days*24,1] + hourly_energy[1:
 plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_sum[1:num_days*24], label=latexstring("\$u_j^{ILC}\$"))
                #xtickfontsize=18,legend=false,
     		   #legendfontsize=10, linewidth=3,xaxis=("days [c]",font(14)),  yaxis=("normed power",font(14)),lc =:black, margin=5Plots.mm)
-savefig("$dir/plots/kappa_0.25/DC_prosumer_demand_seconds_sum_hetero.png")
+savefig("$dir/plots/kappa_1/K_5_DC_prosumer_demand_seconds_sum_hetero.png")
 p_dif_nodes = plot(p1,p2,p3,p4, legend=:bottomright)
 p_all_together = plot(psum,p_dif_nodes, layout=(2,1), legend=false)
-title!("kappa = 0.25")
+title!("kappa = 1")
 #ylims!(-0.7,1.5)
 #title!("Initial convergence")
-savefig(p_all_together ,"$dir/plots/kappa_0.25/_energies_sum_and_seperate.png")
+savefig(p_all_together ,"$dir/plots/kappa_1/_energies_sum_and_seperate.png")
 
 #################################################################################
-##################### CURRENT AND VOLTAGE PLOTTING ##############################
+##################### HOURLY ENERGY CURRENT AND VOLTAGE PLOTTING ##############################
 
 cur = plot(sol, vars = current_filter, title = "Current per edge ", label = ["Edge 1" "Edge 2" "Edge 3" "Edge 4" "Edge 5" "Edge 6"])
 xlabel!("Time in s")
@@ -362,10 +361,11 @@ ener = plot(sol, vars = energy_filter, title = "Energy per node", label = ["Node
 xlabel!("Time in s")
 ylabel!("Power in W")
 savefig("$dir/plots/DC_prosumer_constant_power_no_ILC_voltage_per_node.png")
-plot(hourly_energy,title = "Power per node", label = ["Node 1" "Node 2" "Node 3" "Node 4"])
+
+plot(hourly_energy,title = "Hourly energy per node K = 5", label = ["Node 1" "Node 2" "Node 3" "Node 4"])
 xlabel!("Time in h")
 ylabel!("Power in W")
-savefig("$dir/plots/DC_prosumer_no_ILC_power_per_node.png")
+savefig("$dir/plots/kappa_1/K_5_hourly_energy_per_node.png")
 hourly_current = zeros(24*num_days+1,Int(1.5*N))
 
 for i=1:24*num_days+1
@@ -389,22 +389,7 @@ plot(hourly_voltage,title = "Voltage per node ", label = ["Node 1" "Node 2" "Nod
 xlabel!("Time in h")
 ylabel!("Voltage in V")
 savefig("$dir/plots/DC_prosumer_no_ILC_voltage_per_node.png")
-plot(1:3600:24*num_days*3600,t-> -dd(t)[1], label=latexstring("P_1^d"))
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,1], label=latexstring("y_1^{c,h}")) #, linestyle=:dash)
 
-plot!(1:3600:24*num_days*3600,t-> -dd(t)[2], label=latexstring("P_2^d"))
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,2], label=latexstring("y_2^{c,h}")) #, linestyle=:dash)
-
-plot!(1:3600:24*num_days*3600,t-> -dd(t)[3], label=latexstring("P_3^d"))
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,3], label=latexstring("y_3^{c,h}")) #, linestyle=:dash)
-
-plot!(1:3600:24*num_days*3600,t-> -dd(t)[4], label=latexstring("P_4^d"))
-plot!(1:3600:24*num_days*3600,hourly_energy[1:num_days*24,4], label=latexstring("y_4^{c,h}")) #, linestyle=:dash)
-
-xlabel!("Time in s")
-ylabel!("Demand power")
-title!("Periodic Demand per node")
-savefig("$dir/plots/DC_prosumer_demand_per_node.png")
 ###################### Power sharing validation ################################
 hourly_energy_sum = zeros(24*num_days+1,1)
 for j in 1:N
