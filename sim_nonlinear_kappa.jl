@@ -61,7 +61,7 @@ begin
 	num_prod = 2 # producer nodes
 	nom_cons = N - num_prod
 	N_half = Int(N/2)
-	num_days = 7
+	num_days = 10
 	l_day = 3600*24 # DemCurve.l_day
 	l_hour = 3600 # DemCurve.l_hour
 	l_minute = 60

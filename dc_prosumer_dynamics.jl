@@ -259,7 +259,7 @@ for i=1:24*num_days+1
 		hourly_energy[i,j] = sol((i-1)*3600)[energy_filter[j]]./3600 # weil das integral  auch durch 3600 geteilt wird
 	end
 end
-plot(hourly_energy)
+#plot(hourly_energy)
 #plot(hourly_energy[:,1], label=latexstring("j = 1"))
 #plot!(hourly_energy[:,2], label=latexstring("j = 2"))
 #plot!(hourly_energy[:,3], label=latexstring("j = 3"))
@@ -364,9 +364,9 @@ plot!(1:3600:num_days*24*3600,  ILC_power_hourly_mean_sum[1:num_days*24], label=
     		   legendfontsize=10, linewidth=3, xaxis = ("days [c]",font(14)),yaxis=("normed power",font(14)),legend=false, lc =:black, margin=5Plots.mm)
 #title!(latexstring("K_D = 1, \\kappa = 1"))
 #savefig("$dir/plots/kappa_1/kappa_1_DC_prosumer_demand_seconds_sum_hetero.png")
-title!("sum nodes")
+#title!(latexstring("\\kappa = 2"))
 #savefig("$dir/plots/kappa_1/Powers_K_[0.1_1_0.1_1]_node_sum_hetero.png")
-savefig("$dir/plots/kappa_1/K_variance/K=[0.1,1,0.1,1]/DC_prosumer_demand_seconds_sum_hetero.png")
+savefig("$dir/plots/error_norm_kappa/kappa_1_energies_sum.png")
 
 p_dif_nodes = plot(p1,p2,p3,p4, legend=false)
 #savefig("$dir/plots/kappa_1/K_variance/K_[0.1_1_0.1_1]_seperate.png")
