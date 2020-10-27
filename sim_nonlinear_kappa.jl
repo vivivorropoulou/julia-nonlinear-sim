@@ -61,7 +61,7 @@ begin
 	num_prod = 2 # producer nodes
 	nom_cons = N - num_prod
 	N_half = Int(N/2)
-	num_days = 10
+	num_days = 20
 	l_day = 3600*24 # DemCurve.l_day
 	l_hour = 3600 # DemCurve.l_hour
 	l_minute = 60
@@ -298,19 +298,18 @@ end
 
 
 
-demand_amp1 = demand_amp_var(repeat([80 80 80 10 10 10 40 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
-demand_amp2 = demand_amp_var(repeat([10 10 10 80 80 80 40 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
-demand_amp3 = demand_amp_var(repeat([60 60 60 60 10 10 10 40 40 40 40], outer=Int(N/4))') # random positive amp over days by 10%
-demand_amp4 = demand_amp_var(repeat([30 30 30 30 10 10 10 80 80 80 80], outer=Int(N/4))') # random positive amp over days by 10%
-demand_amp = t->vcat(demand_amp1(t), demand_amp2(t), demand_amp3(t), demand_amp4(t))
+demand_amp1 = demand_amp_var(60 .+ rand(num_days+1,Int(N/4)).* 40.)
+demand_amp2 = demand_amp_var(70 .+ rand(num_days+1,Int(N/4)).* 30.)
+demand_amp3 = demand_amp_var(80 .+ rand(num_days+1,Int(N/4)).* 20.)
+demand_amp4 = demand_amp_var(90 .+ rand(num_days+1,Int(N/4)).* 10.)
+demand_amp = t->vcat(demand_amp1(t), demand_amp2(t),demand_amp3(t),demand_amp4(t))
 
 
-periodic_demand =  t-> demand_amp(t) .* sin(t*pi/(24*3600))^2
 
-samples = 24*N
-
+periodic_demand =  t-> demand_amp(t)./100 .* sin(t*pi/(24*3600))^2
+samples = 24*4
 inter = interpolate([.2 * randn(N) for i in 1:(num_days * samples + 1)], BSpline(Linear()))
-residual_demand = t -> inter(1. + t / (24*3600) * samples)
+residual_demand = t -> inter(1. + t / (24*3600) * samples) # 1. + is needed to avoid trying to access out of range
 
 #########################################
 #            SIM                     #
@@ -330,7 +329,7 @@ Q = Toeplitz(Q1[1001:1001+24-1],Q1[1001:1001+24-1]);
 
 # kappa_lst = (0:0.01:2) ./ l_hour
 begin
-	kappa_lst = (0:.25:1.75)
+	kappa_lst = (0:.25:2)
 	kappa = kappa_lst[1]
 	num_monte = batch_size*length(kappa_lst)
 end
@@ -393,7 +392,7 @@ plot(mean(norm_energy_d[5],dims=2),legend=:topright, label = L"\kappa = 1\, h^{-
 plot!(mean(norm_energy_d[6],dims=2),label=  L"\kappa = 1.25\, h^{-1}", linewidth = 3, linestyle=:dash)
 plot!(mean(norm_energy_d[7],dims=2),label=  L"\kappa = 1.5\, h^{-1}", linewidth = 3, linestyle=:dashdot)
 plot!(mean(norm_energy_d[8],dims=2),label=  L"\kappa = 1.75\, h^{-1}", linewidth = 3, linestyle=:dashdotdot)
-#plot!(mean(norm_energy_d[9],dims=2), label= L"\kappa = 2 h^{-1}", linewidth = 3, linestyle=:dot)
+plot!(mean(norm_energy_d[9],dims=2), label= L"\kappa = 2 h^{-1}", linewidth = 3, linestyle=:dot)
 #title!("Error norm")
 savefig("$dir/plots/variation_kappa_geq_1_hetero.png")
 
