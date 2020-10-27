@@ -1,0 +1,88 @@
+\ProvidesPackage{modifications}[2005/10/21]
+%% Example customizations of the KTH thesis classes.
+%% See the package documentation for more details.
+\maxsecnumdepth{subsubsection}
+\setsecnumdepth{subsubsection}
+\maxtocdepth{subsubsection}
+\settocdepth{subsubsection}
+\newcommand{\removepagenumbers} {\renewcommand{\thepage}{}}
+\renewcommand{\partnamefont}    {\sffamily\bfseries\huge}
+\renewcommand{\partnumfont}     {\sffamily\bfseries\huge}
+\renewcommand{\parttitlefont}   {\sffamily\bfseries\Huge}
+\renewcommand{\chapnamefont}    {\sffamily\bfseries\huge}
+\renewcommand{\chapnumfont}     {\sffamily\bfseries\huge}
+\renewcommand{\chaptitlefont}   {\sffamily\bfseries\Huge}
+\renewcommand{\abstractnamefont}{\sffamily\bfseries\huge}
+\setsecheadstyle   {\sffamily\bfseries\Large\raggedright}
+\setsubsecheadstyle{\sffamily\bfseries\large\raggedright}
+\setparaheadstyle   {\normalsize\sffamily\bfseries}
+\setsubparaheadstyle{\normalsize\sffamily\bfseries}
+\addto\captionsswedish{%
+\def\abstractname{Referat}%
+\def\appendixtocname{Bilagor}%
+\def\appendixpagename{Bilagor}%
+}
+\newcommand\theforeigntitle{}
+\newcommand\foreigntitle[1]{\renewcommand\theforeigntitle{#1}}
+\addtolength{\absleftindent}{1.5cm}
+\addtolength{\absrightindent}{1.5cm}
+
+\renewenvironment{abstract}{%
+  \setup@bstract
+  \begin{\absnamepos}\abstractnamefont\abstractname\end\absnamepos%
+  \vspace{\abstitleskip}%
+  \begin{@bstr@ctlist}\if@bsrunin\@bsrunintitle\fi\abstracttextfont\noindent\ignorespaces}%
+  {\par\end{@bstr@ctlist}}
+  
+\newcommand \@zusammenfassung{Zusammenfassung}
+\newenvironment{zusammenfassung}{%
+    \chapter*{\@zusammenfassung}%
+    \@mkboth{\@zusammenfassung}{\@zusammenfassung}}
+
+\newcommand \@abstracti{Abstract}
+\newenvironment{abstracti}{%
+    \chapter*{\@abstracti}%
+    \@mkboth{\@abstracti}{\@abstracti}%
+}
+
+\newcommand \@acknowledgements{Acknowledgements}
+\newenvironment{acknowledgements}{%
+    \chapter*{\@acknowledgements}%
+    \@mkboth{\@acknowledgements}{\@acknowledgements}%
+}
+
+\newcommand \@declarationoforiginality{Eidesstattliche Erkl\"arung}
+\newenvironment{declarationoforiginality}{%
+    \chapter*{\@declarationoforiginality}%
+    \@mkboth{\@declarationoforiginality}{\@declarationoforiginality}%
+}
+
+\newenvironment{foreignabstract}[1]{%
+\begin{otherlanguage}{#1}%
+\begin{abstract}
+\vspace{-0.75cm}
+\begin{center}\chapnamefont\Large\theforeigntitle\end{center}
+\vspace{0.2cm}%
+}{%
+\end{abstract}\end{otherlanguage}}
+\newenvironment{foreignabstract1}[1]{%
+\begin{otherlanguage}{#1}%
+%\vskip0cm
+\begin{center}\chapnamefont\Large\theforeigntitle\end{center}%
+\begin{abstract}}{%
+\end{abstract}\end{otherlanguage}}
+\makepagestyle{newchap}
+\makeevenhead{newchap}{}{}{\normalfont\small\leftmark}
+\makeoddhead{newchap}{\normalfont\small\rightmark}{}{}
+\makeevenfoot{newchap}{}{\normalfont\small\thepage}{}
+\makeoddfoot{newchap}{}{\normalfont\small\thepage}{}
+\setlength{\@tempdima}{\textwidth}
+\addtolength{\@tempdima}{-2\leftmargini}
+\captionwidth{\@tempdima}
+\changecaptionwidth
+\captiondelim{. }
+\captionnamefont{\normalfont\footnotesize\bfseries}
+\captiontitlefont{\normalfont\footnotesize}
+\setlength{\parskip}{0pt}
+\kthlogo{tu-logo}
+\endinput

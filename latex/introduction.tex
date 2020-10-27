@@ -1,0 +1,29 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+In this chapter, we introduce the background and motivation for this thesis in Section \ref{sec:motivation} and the related work in Section \ref{sec:relatedwork}. Subsequently, a preview of all chapters in this thesis is given in Section \ref{sec:outline}. 
+
+\section{Background and motivation}
+\label{sec:motivation}
+Microgrids have become one of the most popular research topics since the energy transition towards renewable energy and distributed generation. The centralized power system with fossil fuels is being transformed into a increasingly more decentralized power system including fluctuating renewable energy resources \cite{xiaohan_master}. Due to the increased use of direct current based loads and distributed power generation (e.g. photovoltaic) direct current microgrids are a very relevant and popular solution in low-voltage distribution grids with a fair power-sharing for all consumers. To achieve this, power sharing of the prosumer nodes of a direct current microgrid and bounded voltage deviation from the reference voltage of the grid must be assumed \cite{lia_master} by applying a lower-layer control with these objectives. 
+\\However, the demand profiles in power grids contain periodic components.
+Therefore, the iterative learning control is applied as a higher-layer controller to learn the daily periodicity in order to compensate the periodic demand patterns and reduce the decentralized lower layer control energy, since it is assumed that planned day-ahead power infeed is cheaper than instantaneous control power \cite{paperilc,xiaohan_master}. By learning the previous cycle, the iterative learning controller can optimize the performance of the system and reduce the error which is based on the previous cycle.
+\\In this thesis, the overall network modeling of the direct current prosumer-based microgrid in a differential-algebraic equation framework is firstly proposed with the lower-layer control energy design based on the previously mentioned control objectives.
+Furthermore, ILC framework will be proposed as a higher-layer controller, completing a hierarchically controlled system (to cope with different time scales (seconds to days)). 
+\section{Related work}
+\label{sec:relatedwork}
+In the field of power systems, \cite{Hatzi}, as well as \cite{microgrid_concept} and \cite{concept} define the main points of direct current microgrids.  \cite{lia_stability} offers us the concept of meshed DC microgrids, and \cite{lia_master} offers the concept of the droop controlled low-voltage DC microgrids. Both of them have the producer-consumer distinguishment and based on these equations the prosumer-model can be derived. Both sources by Lia Strenge provide differential-algebraic equations for the overall lower-layer microgrid satisfying the power sharing and bounded voltage deviation control objectives.
+\\For the control methods of direct current microgrids, the multilayered schema is explained in \cite{controldc} and \cite{hier_control} and \cite{controldc_energy_man} offer contributions on the two-layer control. 
+\\The concepts of iterative learning control are proposed by Moore in \cite{moore_ilc} and \cite{vl_ilc} with Fig. \ref{fig:figure_ILC}. Obviously this work is based on the previous work of \cite{paperilc}, that provides an overall hierarchical control model for a prosumer-based alternating current microgrid with iterative learning control.
+
+
+\section{Outline}
+\label{sec:outline}
+This work is divided as follows:
+\begin{itemize}
+\item \textbf{Chapter 1}: An introduction to the motivation, background and related work to this thesis
+\item \textbf{Chapter 2}: An overview of the theoretical preliminaries of the prosumer-based DC microgrids, power network modeling and the two-layer control with the ILC method for a better understanding of the following context 
+\item \textbf{Chapter 3}: The proposal of the prosumer-based DC microgrid network model, based on the producer-consumer microgrid model, followed by the representation of the ILC design
+\item \textbf{Chapter 4}: The simulations of the overall model, a list of the results, the model validation and interpretation
+\item \textbf{Chapter 5}: Summary and future directions
+\end{itemize}
+
+

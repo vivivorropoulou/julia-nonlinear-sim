@@ -1,0 +1,232 @@
+\documentclass[a4paper,12pt,twoside]{kth-mag}
+
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\usepackage{fourier}
+%\usepackage{titlesec}
+\usepackage{lipsum}
+\usepackage[english,ngerman]{babel}%languages
+\usepackage{textcomp}
+\usepackage{modifications}
+\usepackage{expdlist}
+\usepackage{empheq}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{listings}
+\makeatletter
+\let\c@lofdepth\relax
+\let\c@lotdepth\relax
+\makeatother
+
+%% main packages
+\usepackage{amsmath,amsfonts,amssymb,amsthm}%math packages
+\usepackage{siunitx}
+%%\numberwithin{equation}{section}
+\usepackage{graphicx,psfrag,color,subfig}
+\usepackage{enumerate}%enumerated list
+\usepackage{booktabs}%nice tables
+
+%tikz, define its settings
+\usepackage{pgf,pgfplots,tikz}
+\usetikzlibrary{arrows,automata,plotmarks}
+\usetikzlibrary{positioning}
+\tikzset{
+    state/.style={
+           rectangle,
+           rounded corners,
+           draw=black,
+           minimum height=1em,
+           inner sep=1em,
+           text centered,
+           },
+}
+
+
+%%
+%% Julia definition (c) 2014 Jubobs
+%%
+\lstdefinelanguage{Julia}%
+{morekeywords={abstract,break,case,catch,const,continue,do,else,elseif,%
+		end,export,false,for,function,immutable,import,importall,if,in,%
+		macro,module,otherwise,quote,return,switch,true,try,type,typealias,%
+		using,while},%
+	sensitive=true,%
+	alsoother={$},%
+	morecomment=[l]\#,%
+	morecomment=[n]{\#=}{=\#},%
+	morestring=[s]{"}{"},%
+	morestring=[m]{'}{'},%
+}[keywords,comments,strings]%
+
+\lstset{%
+	language         = Julia,
+	basicstyle       = \ttfamily,
+	keywordstyle     = \bfseries\color{blue},
+	stringstyle      = \color{magenta},
+	commentstyle     = \color{ForestGreen},
+	showstringspaces = false,
+}
+%% Definitions of additional environments
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+\newtheorem{proposition}{Proposition}
+\newtheorem*{notation}{Notation}
+\newtheorem*{example}{Example}
+\newtheorem*{assumption}{Assumptions}
+
+\DeclareMathOperator{\diag}{diag}
+\DeclareSIUnit{\hour}{h} 
+
+\usepackage{hyperref}
+		\hypersetup{%
+		bookmarksopen,
+		bookmarksopenlevel={1},
+		bookmarksnumbered,
+		pdftitle = {Iterative learning control in prosumer-based DC microgrids},
+		pdfsubject = {Bachelor thesis},
+		pdfauthor = {Paraskevi Vorropoulou},
+		pdfkeywords =  {hybrid systems, discrete event systems, abstractions, approximations},
+		colorlinks,
+		citecolor=black,
+		linkcolor=black}
+		
+\title{Iterative learning control in prosumer-based DC microgrids}
+
+\subtitle{Bachelor thesis}
+
+\author{Paraskevi Vorropoulou}
+
+\begin{document}
+
+\frontmatter
+\pagestyle{plain}
+\selectlanguage{ngerman}
+
+\input{titlepage}
+\clearpage
+
+\begin{declarationoforiginality}
+
+Hiermit erkläre ich, dass ich die vorliegende Arbeit selbstst\"andig und eigenh\"andig sowie
+ohne unerlaubte fremde Hilfe und ausschließlich unter Verwendung der aufgef\"uhrten Quellen
+und Hilfsmittel angefertigt habe.
+
+\vspace{20mm}
+
+Berlin, den \today \\
+
+\vspace{10mm}
+.................................................
+
+\vspace{2mm}
+Paraskevi Vorropoulou
+\newpage
+\end{declarationoforiginality}
+
+\begin{zusammenfassung}
+Seit Ende des 20. Jahrhunderts ist der Begriff der Energiewende von großer Bedeutung. Darunter versteht man den Übergang von fossilen Energieträgern zur nachhaltigen Energieressourcen, die immer häufiger Anwendung finden in der Stromerzeugung. Immer beliebter wird unter anderem die dezentrale Energieversorgung, die verbrauchernahe Erzeugung elektrischer Energie, sodass der Strombedarf unmittelbar für den Verbraucher gedeckt ist. Dazu zählen Inselnetze beispielsweise, die prosumer-basierend sind, also produzierend und verbrauchend gleichzeitig. 
+\\Die zunehmende Nutzung von gleichstrom-basierend Ressourcen und Lasten ist auch ein Resultat der Energiewende, zum Beispiel die Photovoltaik und ist auch aus diesem Grund eine sehr relevante Lösung für die Elektrifizierung und verteilten Netzen im Niederspannungsbereich. 
+\\Lastprofile in Energienetzen haben aber oftmals periodische Komponenten. Diese können durch geeignete Regelung gelernt und allzu ganz kompensiert werden, sodass auch gleichzeitig Regelungsenergie eines Systems gespart wird.  
+Geeignet dafür ist die iterativ lernende Regelung (ILR). 
+\\In dieser Arbeit wurde die iterative lernende Regelung 
+in prosumer-basierenden Gleichstrominselnetzen angewandt, um die oben erwähnte Anforderung der Ausgleichung von periodischen Komponenten und des Energiesparens zu untersuchen. Dazu wird ein Modell für diese Art der Inselnetze vorgeschlagen und beschrieben mit geeigneten Gleichungen und Systemparametern als eine Ebene, und als weitere Kontrollebene wird die ILR damit verbunden, sodass ein Framework eingeführt wird. Dieses wird anschließend simuliert und dessen Leistung validiert. 
+ 
+{\textbf{Schl\"usselw\"orter:} Prosumer-basiertes Inselnetz, Gleichstrominselnetz iterativ lernende Regelung, Dezentrale Energieversorgung, ...}
+
+\end{zusammenfassung}
+
+\selectlanguage{english}
+
+\begin{abstracti}
+Since the end of the 20th century, the concept of the energy transition has been of great importance. This is understood to mean the transition from fossil fuels to renewable energy resources, which are increasingly being used in power generation. Among other things, decentralized energy supply, the generation of electrical energy close to the consumer so that the electricity demand is covered directly for the consumer, is becoming increaslingly popular. This includes island networks, that are e.g. prosumer-based, i.e. producing and consuming simultaneously.
+\\The increasing use of direct-current based resources and loads is also a result of the energy transition, and for this reason it is also a very relevant solution for electrification and distributed networks in the low-voltage range.
+\\Load profiles in energy networks often have periodic components. These can be learned and compensated by appropriate controlling, so that the control energy of a system can be saved at the same time. The iterative learning control (ILC) is suitable for this purpose.  
+\\ In this thesis the ILC is applied in prosumer-based direct current microgrids to investigate the above-mentioned requirement of balancing periodic components and energy saving. For this purpose, a model for this type of microgrids is proposed and described with suitable equations and system parameters as one level, and as a further control level the ILC is connected to it, so that a framework is introduced. This framework will then be simulated and its performance validated.
+
+{\textbf{Keywords:} Prosumer-based microgrids, direct current microgrids, iterative learning control, distributed energy generation, ...}
+\end{abstracti}
+
+\begin{acknowledgements}
+
+First, I would like to express my deep gratitude to M.Sc. Lia Strenge for her outstanding supervision and the support during the process of this work; Dr.Chris Rackauckas for the helpful comments in Julia programming.  \\ Furthermore many thanks for the love and energy from my parents, sisters, friends and my boyfriend. 
+\vspace{10mm}
+
+Paraskevi Vorropoulou
+
+\end{acknowledgements}
+\pagenumbering{arabic}
+\clearpage
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+
+\setlength{\parskip}{\baselineskip}
+\setlength{\parindent}{0pt}
+
+\mainmatter
+
+%\pagestyle{newchap}
+
+\chapter{Introduction}
+\label{ch:intro}
+\input{introduction}
+
+\chapter{Theory and background information}
+\label{ch:theo}
+\input{theory}
+
+\chapter{Network modeling of the prosumer-based DC Microgrid and the iterative learning controller design}
+\label{sec:model}
+\input{modeling}
+
+\chapter{Simulation-based analysis}
+\label{sec:simulation}
+\input{simulation}
+
+\chapter{Conclusions}
+\label{sec:conclusions}
+\input{conclusions}
+
+
+
+\bibliography{literature}
+\bibliographystyle{IEEEtran}
+\nocite{paperilc}
+\nocite{dg_wiki}
+\nocite{epa_dg}
+\nocite{Hatzi}
+\nocite{concept}
+\nocite{microgrid_concept}
+\nocite{versus}
+\nocite{lineloss}
+\nocite{portm}
+\nocite{prosumage}
+\nocite{prosume}
+\nocite{un_graph}
+\nocite{graph_theory}
+\nocite{lia_master}
+\nocite{lia_stability}
+\nocite{xiaohan_master}
+\nocite{cs_princi}
+\nocite{cs_princi_wiki}
+\nocite{oploop}
+\nocite{hier_control}
+\nocite{controldc}
+\nocite{controldc_energy_man}
+\nocite{vl_ilc}
+\nocite{moore_ilc}
+\nocite{reduced_dc}
+\nocite{voltage_droop}
+\nocite{mikieus}
+
+\chapter*{Appendix}
+\label{appendix}
+\input{appendix}
+
+\end{document}

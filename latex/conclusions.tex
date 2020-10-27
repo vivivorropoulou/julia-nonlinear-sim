@@ -1,0 +1,11 @@
+The thesis and results presented in the previous sections will be summarized in Section \ref{sec:summary}. Further, a number of recommendations for future work will be provided in Section \ref{sec:future}.
+
+\section{Summary of the thesis}
+\label{sec:summary}
+We propose a framework for a hierarchical control in a prosumer-based direct current microgrid with suitable parameters.
+The prosumer-based network modeling is derived from the already existing producer-consumer scheme and the Kirchhoff Laws (Section \ref{subsec:prosumer}). For the low-level control, a controller with the main focus on power sharing and voltage droop was applied (Section \ref{subsec:conobj}). By choosing the appropriate control coefficient, power sharing was achieved, as seen in the simulation in Section \ref{sec:valid_no_ILC} and \ref{sec:valid_ILC}. 
+For the higher-layer control the predefined iterative learning controller was applied, a controller that learns the periodic demand pattern in order to save as much low-level control energy (Section \ref{sec:ilc_design}) and by choosing the appropriate learning parameter, the learning scenario can achieved different velocities, while power sharing and voltage droop is guaranteed.
+
+\section{Future Work}
+\label{sec:future}
+In the future, the analysis of the iterative learning control in a prosumer-based direct current microgrid by implementing a lifted system for asymptotic stability and monotonic convergence should be developed. Furthermore,  viewing the learning scenario with real demand data and comparing it to the already existing prosumer-based alternating current microgrid from \cite{paperilc} are tasks that could be done. 

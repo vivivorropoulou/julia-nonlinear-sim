@@ -1,0 +1,36 @@
+\BOOKMARK [0][]{section*.7}{Contents}{}% 1
+\BOOKMARK [0][]{section*.8}{List of Figures}{}% 2
+\BOOKMARK [0][]{section*.9}{List of Tables}{}% 3
+\BOOKMARK [0][]{chapter.1}{1 Introduction}{}% 4
+\BOOKMARK [1][-]{section.1.1}{1.1 Background and motivation}{chapter.1}% 5
+\BOOKMARK [1][-]{section.1.2}{1.2 Related work}{chapter.1}% 6
+\BOOKMARK [1][-]{section.1.3}{1.3 Outline}{chapter.1}% 7
+\BOOKMARK [0][]{chapter.2}{2 Theory and background information}{}% 8
+\BOOKMARK [1][-]{section.2.1}{2.1 Basics of prosumer-based DC microgrids}{chapter.2}% 9
+\BOOKMARK [2][-]{subsection.2.1.1}{2.1.1 Distributed generation}{section.2.1}% 10
+\BOOKMARK [2][-]{subsection.2.1.2}{2.1.2 \040Microgrids}{section.2.1}% 11
+\BOOKMARK [2][-]{subsection.2.1.3}{2.1.3 Direct current versus alternating current microgrids}{section.2.1}% 12
+\BOOKMARK [2][-]{subsection.2.1.4}{2.1.4 Prosumer-based \(DC\) microgrids}{section.2.1}% 13
+\BOOKMARK [1][-]{section.2.2}{2.2 Basics of power network modeling}{chapter.2}% 14
+\BOOKMARK [1][-]{section.2.3}{2.3 The two-layer control with the iterative learning control method}{chapter.2}% 15
+\BOOKMARK [2][-]{subsection.2.3.1}{2.3.1 Basics of of the standard control feedback loop}{section.2.3}% 16
+\BOOKMARK [2][-]{subsection.2.3.2}{2.3.2 Two-layer control}{section.2.3}% 17
+\BOOKMARK [2][-]{subsection.2.3.3}{2.3.3 Iterative learning control}{section.2.3}% 18
+\BOOKMARK [0][]{chapter.3}{3 Network modeling of the prosumer-based DC Microgrid and the iterative learning controller design}{}% 19
+\BOOKMARK [1][-]{section.3.1}{3.1 Network model of the prosumer-based DC microgrid with lower-layer control}{chapter.3}% 20
+\BOOKMARK [2][-]{subsection.3.1.1}{3.1.1 Network modeling of the producer-consumer DC microgrid}{section.3.1}% 21
+\BOOKMARK [2][-]{subsection.3.1.2}{3.1.2 Network model of the prosumer-based DC microgrid with lower-layer control}{section.3.1}% 22
+\BOOKMARK [1][-]{section.3.2}{3.2 Higher-layer controller structure and design}{chapter.3}% 23
+\BOOKMARK [2][-]{subsection.3.2.1}{3.2.1 Control objectives}{section.3.2}% 24
+\BOOKMARK [2][-]{subsection.3.2.2}{3.2.2 Iterative learning controller}{section.3.2}% 25
+\BOOKMARK [0][]{chapter.4}{4 Simulation-based analysis}{}% 26
+\BOOKMARK [1][-]{section.4.1}{4.1 Model validation and results of the network without higher-layer control and periodic load profiles}{chapter.4}% 27
+\BOOKMARK [1][-]{section.4.2}{4.2 Model validation and results of the network with higher-layer control and periodic load profiles}{chapter.4}% 28
+\BOOKMARK [2][-]{subsection.4.2.1}{4.2.1 Case 1: Validation of the network modeling with bold0mu mumu KD,j = 1KD,j = 1paperilcKD,j = 1KD,j = 1KD,j = 1KD,j = 1 and bold0mu mumu = 1= 1paperilc= 1= 1= 1= 1}{section.4.2}% 29
+\BOOKMARK [2][-]{subsection.4.2.2}{4.2.2 Case 2: Variation of bold0mu mumu KDKDpaperilcKDKDKDKD and bold0mu mumu = 1= 1paperilc= 1= 1= 1= 1}{section.4.2}% 30
+\BOOKMARK [2][-]{subsection.4.2.3}{4.2.3 Case 3: Variation of bold0mu mumu paperilc and bold0mu mumu KD,j= 1 [ohm]-1KD,j= 1 [ohm]-1paperilcKD,j= 1 [ohm]-1KD,j= 1 [ohm]-1KD,j= 1 [ohm]-1KD,j= 1 [ohm]-1}{section.4.2}% 31
+\BOOKMARK [2][-]{subsection.4.2.4}{4.2.4 Error dynamics for different learning gains}{section.4.2}% 32
+\BOOKMARK [1][-]{section.4.3}{4.3 Discussion}{chapter.4}% 33
+\BOOKMARK [0][]{chapter.5}{5 Conclusions}{}% 34
+\BOOKMARK [1][-]{section.5.1}{5.1 Summary of the thesis}{chapter.5}% 35
+\BOOKMARK [1][-]{section.5.2}{5.2 Future Work}{chapter.5}% 36

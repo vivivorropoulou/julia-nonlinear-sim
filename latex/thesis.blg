@@ -1,0 +1,81 @@
+This is BibTeX, Version 0.99d (TeX Live 2019/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: thesis.aux
+The style file: IEEEtran.bst
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Database file #1: literature.bib
+I was expecting a `,' or a `}'---line 12 of file literature.bib
+ : 
+ : @misc{dg_wiki,
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+-- IEEEtran.bst version 1.13 (2008/09/30) by Michael Shell.
+-- http://www.michaelshell.org/tex/ieeetran/bibtex/
+-- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
+Too many commas in name 1 of "Lia Strenge, Xiaohan Jing, Ruth Boersma, Paul Schultz, Frank Hellmann, J\"urgen Kurths, J\"org Raisch, Thomas Seel" for entry paperilc
+while executing---line 2419 of file IEEEtran.bst
+Too many commas in name 1 of "Lia Strenge, Xiaohan Jing, Ruth Boersma, Paul Schultz, Frank Hellmann, J\"urgen Kurths, J\"org Raisch, Thomas Seel" for entry paperilc
+while executing---line 2419 of file IEEEtran.bst
+Too many commas in name 1 of "Lia Strenge, Xiaohan Jing, Ruth Boersma, Paul Schultz, Frank Hellmann, J\"urgen Kurths, J\"org Raisch, Thomas Seel" for entry paperilc
+while executing---line 2419 of file IEEEtran.bst
+Too many commas in name 1 of "Lia Strenge, Xiaohan Jing, Ruth Boersma, Paul Schultz, Frank Hellmann, J\"urgen Kurths, J\"org Raisch, Thomas Seel" for entry paperilc
+while executing---line 2419 of file IEEEtran.bst
+Too many commas in name 1 of "Lia Strenge, Xiaohan Jing, Ruth Boersma, Paul Schultz, Frank Hellmann, J\"urgen Kurths, J\"org Raisch, Thomas Seel" for entry paperilc
+while executing---line 2419 of file IEEEtran.bst
+Warning--empty year in paperilc
+Too many commas in name 1 of "Lia Strenge, H. Kirchhoff, G.L. Ndow, Frank Hellmann" for entry lia_stability
+while executing---line 2419 of file IEEEtran.bst
+Name 1 in "N. Hatziargyriou, and others" has a comma at the end for entry Hatzi
+while executing---line 2419 of file IEEEtran.bst
+Name 1 in "J.J. Justo, and others" has a comma at the end for entry versus
+while executing---line 2419 of file IEEEtran.bst
+Too many commas in name 1 of "Johannes Schiffer, Darina Goldin, Jorg Raisch, Tevfik Sezi" for entry graph_theory
+while executing---line 2419 of file IEEEtran.bst
+
+Done.
+You've used 27 entries,
+            4039 wiz_defined-function locations,
+            923 strings with 11898 characters,
+and the built_in function-call counts, 9302 in all, are:
+= -- 731
+> -- 107
+< -- 0
++ -- 57
+- -- 23
+* -- 338
+:= -- 1688
+add.period$ -- 54
+call.type$ -- 27
+change.case$ -- 38
+chr.to.int$ -- 0
+cite$ -- 28
+duplicate$ -- 892
+empty$ -- 959
+format.name$ -- 30
+if$ -- 2012
+int.to.chr$ -- 0
+int.to.str$ -- 27
+missing$ -- 164
+newline$ -- 104
+num.names$ -- 16
+pop$ -- 477
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 2
+skip$ -- 734
+stack$ -- 0
+substring$ -- 49
+swap$ -- 440
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 5
+type$ -- 27
+warning$ -- 1
+while$ -- 16
+width$ -- 29
+write$ -- 226
+(There were 10 error messages)
